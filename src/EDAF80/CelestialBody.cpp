@@ -25,11 +25,39 @@ glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
 	// If a different ratio was needed, for example a duration in
 	// milliseconds, the following would have been used:
 	// auto const elapsed_time_ms = std::chrono::duration<float, std::milli>(elapsed_time).count();
+	//LamLe: Update the spin angle for each render iteration by update its previous value based on timing
+	_body.spin.rotation_angle += -elapsed_time_s * _body.spin.speed;
+	_body.orbit.rotation_angle += -elapsed_time_s * _body.orbit.speed;
 
-	_body.spin.rotation_angle = -glm::half_pi<float>() / 2.0f;
-
+	glm::mat4 retMatrix = parent_transform;
 	glm::mat4 world = parent_transform;
+	
 
+	//LamLe: 1st rotate around its Z_axis to create the tilted orbit
+	world = glm::rotate(world, _body.orbit.inclination, glm::vec3(0.0f, 0.0f, 1.0f));
+	retMatrix = glm::rotate(retMatrix, _body.orbit.inclination, glm::vec3(0.0f, 0.0f, 1.0f));
+	//LamLe: 2nd rotate around its Y_axis to have the object X_axis points to another direction
+	world = glm::rotate(world, _body.orbit.rotation_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+	retMatrix = glm::rotate(retMatrix, _body.orbit.rotation_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+	//LamLe: 3rd: translate the object on its rotated X_axis. 
+	world = glm::translate(world, glm::vec3(_body.orbit.radius, 0.0f, 0.0f));
+	retMatrix = glm::translate(retMatrix, glm::vec3(_body.orbit.radius, 0.0f, 0.0f));
+	//LamLe: END A1E3
+
+	//LamLe: BEGIN A1E2
+	//LamLe: 4th: rotate the object on its Z axis to create a tilted spinning angle
+	world = glm::rotate(world, _body.spin.axial_tilt, glm::vec3(0.0f, 0.0f, 1.0f));
+	//retMatrix = glm::rotate(retMatrix, _body.spin.axial_tilt, glm::vec3(0.0f, 0.0f, 1.0f));
+	//LamLe: 5th: rotate the object on its Y axis. Now the object will spin around its Y axis
+	world = glm::rotate(world, _body.spin.rotation_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+	//LamLe: END A1E2
+
+	//LamLe: BEGIN A1E3
+	//LamLe: update the orbit rotation angle for each render iteration by updating its previous value based on timing
+	world = glm::scale(world, _body.scale);
+	
+	
+	
 	if (show_basis)
 	{
 		bonobo::renderBasis(1.0f, 2.0f, view_projection, world);
@@ -43,7 +71,7 @@ glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
 	// world matrix.
 	_body.node.render(view_projection, world);
 
-	return parent_transform;
+	return retMatrix;
 }
 
 void CelestialBody::add_child(CelestialBody* child)
