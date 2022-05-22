@@ -19,6 +19,17 @@ int main()
 
 	using namespace std::literals::chrono_literals;
 
+#define		BODYID_SUN		0
+#define		BODYID_MERCURY	1
+#define		BODYID_VENUS	2
+#define		BODYID_EARTH	3
+#define		BODYID_MOON		4
+#define		BODYID_MARS		5
+#define		BODYID_JUPITER	6
+#define		BODYID_SATURN	7
+#define		BODYID_URANUS	8
+#define		BODYID_NEPTUNE	8
+
 	//
 	// Set up the framework
 	//
@@ -163,52 +174,62 @@ int main()
 	neptune.set_scale(neptune_scale);
 	neptune.set_spin(neptune_spin);
 	neptune.set_orbit(neptune_orbit);
-	
+	neptune.set_bodyid(BODYID_NEPTUNE);
+
 	CelestialBody uranus(sphere, &celestial_body_shader, uranus_texture);
 	uranus.set_scale(uranus_scale);
 	uranus.set_spin(uranus_spin);
 	uranus.set_orbit(uranus_orbit);
-	
+	uranus.set_bodyid(BODYID_URANUS);
+
 	CelestialBody saturn(sphere, &celestial_body_shader, saturn_texture);
 	saturn.set_scale(saturn_scale);
 	saturn.set_spin(saturn_spin);
 	saturn.set_orbit(saturn_orbit);
-	
+	saturn.set_ring(saturn_ring_shape, &celestial_ring_shader, saturn_ring_texture, saturn_ring_scale );
+	saturn.set_bodyid(BODYID_SATURN);
+
 	CelestialBody jupiter(sphere, &celestial_body_shader, jupiter_texture);
 	jupiter.set_scale(jupiter_scale);
 	jupiter.set_spin(jupiter_spin);
 	jupiter.set_orbit(jupiter_orbit);
-	
+	jupiter.set_bodyid(BODYID_JUPITER);
+
 	CelestialBody mars(sphere, &celestial_body_shader, mars_texture);
 	mars.set_scale(mars_scale);
 	mars.set_spin(mars_spin);
 	mars.set_orbit(mars_orbit);
+	mars.set_bodyid(BODYID_MARS);
 
 	CelestialBody moon(sphere, &celestial_body_shader, moon_texture);
 	moon.set_scale(moon_scale);
 	moon.set_spin(moon_spin);
 	moon.set_orbit(moon_orbit);
-
+	moon.set_bodyid(BODYID_MOON);
+	
 	CelestialBody earth(sphere, &celestial_body_shader, earth_texture);
 	earth.set_scale(earth_scale);
 	earth.set_spin(earth_spin);
 	earth.set_orbit(earth_orbit);
 	earth.add_child(&moon);
+	earth.set_bodyid(BODYID_EARTH);
 
 	CelestialBody venus(sphere, &celestial_body_shader, venus_texture);
 	venus.set_scale(venus_scale);
 	venus.set_spin(venus_spin);
 	venus.set_orbit(venus_orbit);
+	venus.set_bodyid(BODYID_VENUS);
 
 	CelestialBody mercury(sphere, &celestial_body_shader, mercury_texture);
 	mercury.set_scale(mercury_scale);
 	mercury.set_spin(mercury_spin);
 	mercury.set_orbit(mercury_orbit);
+	mercury.set_bodyid(BODYID_MERCURY);
 
 	CelestialBody sun(sphere, &celestial_body_shader, sun_texture);
 	sun.set_scale(sun_scale);
 	sun.set_spin(sun_spin);
-	
+	sun.set_bodyid(BODYID_SUN);
 
 	sun.add_child(&mercury);
 	sun.add_child(&venus);
@@ -216,10 +237,8 @@ int main()
 	sun.add_child(&mars);
 	sun.add_child(&jupiter);
 	sun.add_child(&saturn);
-	sun.add_child(&uranus);
+	sun.add_child(&uranus);	
 	sun.add_child(&neptune);
-	
-
 
 	//
 	// Define the colour and depth used for clearing.
@@ -301,6 +320,7 @@ int main()
 
 		//LamLe: Create CelestialBody stack:
 		std::stack<CelestialBodyRef> CelestialBodyStack;
+		//LamLe: put the sun as root node and identity matrix as intial parent transformations
 		CelestialBodyRef curNode{&sun,glm::mat4(1.0f)};
 		CelestialBodyStack.push(curNode);
 
@@ -315,7 +335,13 @@ int main()
 			glm::mat4 retMat = 
 				curNode.body->render(animation_delta_time_us, camera.GetWorldToClipMatrix(), curNode.parent_transform, show_basis);
 
-			//iterate through all children of current node
+			//// check body ID
+			if (BODYID_EARTH == curNode.body->get_bodyid())
+			{
+			
+			}
+
+			//Iterate through all children of current node
 			for (unsigned int i = 0; i < curNode.body->get_children().size(); i++)
 			{
 				//LamLe: construct the reference of current child

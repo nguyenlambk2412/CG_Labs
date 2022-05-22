@@ -79,6 +79,11 @@ public:
 	              GLuint diffuse_texture_id,
 	              glm::vec2 const& scale = glm::vec2(1.0f));
 
+	void set_bodyid(int id);
+
+	int get_bodyid();
+
+
 private:
 	struct {
 		Node node;
@@ -94,6 +99,8 @@ private:
 			float speed{0.0f};          //!< Rotation speed in radians per second.
 			float rotation_angle{0.0f}; //!< How much has it rotated around its rotational axis; in radians.
 		} spin;
+
+		int bodyId = 0;
 	} _body;
 
 	struct {

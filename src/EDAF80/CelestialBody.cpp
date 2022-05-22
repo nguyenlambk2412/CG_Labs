@@ -44,10 +44,13 @@ glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
 	retMatrix = glm::translate(retMatrix, glm::vec3(_body.orbit.radius, 0.0f, 0.0f));
 	//LamLe: END A1E3
 
+	//LamLe: rotate back to original position after creating the orbit. From here, create the spin properties
+	world = glm::rotate(world, -_body.orbit.rotation_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+
 	//LamLe: BEGIN A1E2
 	//LamLe: 4th: rotate the object on its Z axis to create a tilted spinning angle
 	world = glm::rotate(world, _body.spin.axial_tilt, glm::vec3(0.0f, 0.0f, 1.0f));
-	//retMatrix = glm::rotate(retMatrix, _body.spin.axial_tilt, glm::vec3(0.0f, 0.0f, 1.0f));
+	retMatrix = glm::rotate(retMatrix, _body.spin.axial_tilt, glm::vec3(0.0f, 0.0f, 1.0f));
 	//LamLe: 5th: rotate the object on its Y axis. Now the object will spin around its Y axis
 	world = glm::rotate(world, _body.spin.rotation_angle, glm::vec3(0.0f, 1.0f, 0.0f));
 	//LamLe: END A1E2
@@ -71,6 +74,18 @@ glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
 	// world matrix.
 	_body.node.render(view_projection, world);
 
+	//render ring
+	if (true == _ring.is_set)
+	{
+		//Lastly apply all the parent transformations
+		glm::mat4 ringWorld = retMatrix;
+		//secondly rotate
+		ringWorld = glm::rotate(ringWorld, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+		//Firstly scale
+		ringWorld = glm::scale(ringWorld, glm::vec3(_ring.scale.x, _ring.scale.y, 0.0f));
+		
+		_ring.node.render(view_projection, ringWorld);
+	}
 	return retMatrix;
 }
 
@@ -116,4 +131,14 @@ void CelestialBody::set_ring(bonobo::mesh_data const& shape,
 	_ring.scale = scale;
 
 	_ring.is_set = true;
+}
+
+void CelestialBody::set_bodyid(int id)
+{
+	_body.bodyId = id;
+}
+
+int CelestialBody::get_bodyid()
+{
+	return _body.bodyId;
 }
