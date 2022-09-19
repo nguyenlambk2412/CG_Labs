@@ -29,7 +29,8 @@ glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
 	_body.spin.rotation_angle = -glm::half_pi<float>() / 2.0f;
 
 	glm::mat4 world = parent_transform;
-
+	//A1_E1: Overwrite the world matrix with the scaled matrix
+	world = glm::scale(glm::mat4(1.0f), _body.scale);
 	if (show_basis)
 	{
 		bonobo::renderBasis(1.0f, 2.0f, view_projection, world);
