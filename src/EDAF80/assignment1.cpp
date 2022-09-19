@@ -165,7 +165,7 @@ int main()
 
 	CelestialBody earth(sphere, &celestial_body_shader, earth_texture);
 	// A1_E1: scale the earth by (1 0.2 0.2)
-	earth.set_scale(glm::vec3(1.0f, 0.2f, 0.2f));
+	//earth.set_scale(glm::vec3(1.0f, 0.2f, 0.2f));
 	earth.set_spin(earth_spin);
 	earth.set_orbit({-2.5f, glm::radians(45.0f), glm::two_pi<float>() / 10.0f});
 	earth.add_child(&moon);

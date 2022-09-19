@@ -27,16 +27,27 @@ glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
 	// auto const elapsed_time_ms = std::chrono::duration<float, std::milli>(elapsed_time).count();
 
 	_body.spin.rotation_angle += -glm::half_pi<float>()* elapsed_time_s / 2.0f;
+	_body.orbit.rotation_angle += -glm::half_pi<float>() * elapsed_time_s / 2.0f;
 
 	glm::mat4 world = parent_transform;
 	//A1_E1: Overwrite the world matrix with the scaled matrix
 	world = glm::scale(glm::mat4(1.0f), _body.scale);
+
 	
+	//A1:E3: Calculate the tilting matrix for the orbit
+	world = glm::rotate(world, _body.orbit.inclination, glm::vec3(0.0f, 0.0f, 1.0f));
+	//A1:E3: Calculate the orbit rotation
+	world = glm::rotate(world, _body.orbit.rotation_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+	//A1_E3: compute the translation matrix T0
+	world = glm::translate(world, glm::vec3(_body.orbit.radius, 0.0f, 0.0f));
+
 	//A1_E2: compute the rotation matrix R2s and overwirte the world matrix by it. This should be the 1st rotation since we want to create the tilt for the earth 
 	world = glm::rotate(world, _body.spin.axial_tilt, glm::vec3(0.0f, 0.0f, 1.0f));
 
 	//A1_E2: compute the rotation matrix R1s. This should be the 2st rotation since we want to create the earth to spin around the y-axis
 	world = glm::rotate(world, _body.spin.rotation_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+
+	
 	if (show_basis)
 	{
 		bonobo::renderBasis(1.0f, 2.0f, view_projection, world);
