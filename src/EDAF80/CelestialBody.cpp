@@ -26,8 +26,8 @@ glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
 	// milliseconds, the following would have been used:
 	// auto const elapsed_time_ms = std::chrono::duration<float, std::milli>(elapsed_time).count();
 
-	_body.spin.rotation_angle += -glm::half_pi<float>() * elapsed_time_s / 2.0f;
-	_body.orbit.rotation_angle += -glm::half_pi<float>() * elapsed_time_s / 2.0f;
+	_body.spin.rotation_angle += -elapsed_time_s * _body.spin.speed;
+	_body.orbit.rotation_angle += -elapsed_time_s * _body.orbit.speed;
 
 	glm::mat4 return_transform = parent_transform;
 	glm::mat4 world = parent_transform;
