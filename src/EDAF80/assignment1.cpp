@@ -172,6 +172,7 @@ int main()
 	saturn.set_scale(saturn_scale);
 	saturn.set_spin(saturn_spin);
 	saturn.set_orbit(saturn_orbit);
+	saturn.set_ring(saturn_ring_shape, &celestial_ring_shader, saturn_ring_texture, saturn_ring_scale);
 
 	CelestialBody jupiter(sphere, &celestial_body_shader, jupiter_texture);
 	jupiter.set_scale(jupiter_scale);
