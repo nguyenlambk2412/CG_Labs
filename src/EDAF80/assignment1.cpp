@@ -11,7 +11,7 @@
 
 #include <clocale>
 #include <cstdlib>
-
+#include <stack>
 
 int main()
 {
@@ -251,9 +251,37 @@ int main()
 		// TODO: Replace this explicit rendering of the Earth and Moon
 		// with a traversal of the scene graph and rendering of all its
 		// nodes.
-		glm::mat4 parent_transform = earth.render(animation_delta_time_us, camera.GetWorldToClipMatrix(), glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, 0.0f)), show_basis);
-		moon.render(animation_delta_time_us, camera.GetWorldToClipMatrix(), parent_transform, show_basis);
 
+		//A1_E5: Create CelestialBody stack:
+		std::stack<CelestialBodyRef> CelestialBodyStack;
+		//A1_E5: add the earth as the initial node
+		CelestialBodyRef curNode{ &earth,glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, 0.0f))};
+		CelestialBodyStack.push(curNode);
+
+		////A1_E5: loop until the stack is empty
+		while (!CelestialBodyStack.empty())
+		{
+			//A1_E5: get the node on top of stack
+			curNode = CelestialBodyStack.top();
+			//A1_E5: pop it out of stack
+			CelestialBodyStack.pop();
+			//A1_E5: Process current node
+			glm::mat4 retMat =
+				curNode.body->render(animation_delta_time_us, camera.GetWorldToClipMatrix(), curNode.parent_transform, show_basis);
+
+			//A1_E5: iterate through all children of current node
+			for (unsigned int i = 0; i < curNode.body->get_children().size(); i++)
+			{
+				//A1_E5: construct the reference of current child
+				CelestialBodyRef child{ curNode.body->get_children()[i], retMat };
+				//A1_E5: put it into the stack
+				CelestialBodyStack.push(child);
+			}
+
+		}
+
+		/*glm::mat4 parent_transform = earth.render(animation_delta_time_us, camera.GetWorldToClipMatrix(), glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, 0.0f)), show_basis);
+		moon.render(animation_delta_time_us, camera.GetWorldToClipMatrix(), parent_transform, show_basis);*/
 
 		//
 		// Add controls to the scene.
