@@ -43,7 +43,7 @@ void
 edaf80::Assignment2::run()
 {
 	// Load the sphere geometry
-	auto const shape = parametric_shapes::createCircleRing(2.0f, 0.75f, 40u, 4u);
+	auto const shape = parametric_shapes::createSphere(0.15f, 10u, 10u);
 	if (shape.vao == 0u)
 		return;
 
@@ -111,7 +111,7 @@ edaf80::Assignment2::run()
 
 	// Set the default tensions value; it can always be changed at runtime
 	// through the "Scene Controls" window.
-	float catmull_rom_tension = 0.0f;
+	float catmull_rom_tension = 0.5f;
 
 	// Set whether the default interpolation algorithm should be the linear one;
 	// it can always be changed at runtime through the "Scene Controls" window.
@@ -173,7 +173,8 @@ edaf80::Assignment2::run()
 	float basis_length_scale = 1.0f;
 
 	changeCullMode(cull_mode);
-
+	int posIndex = 0;
+	float time = 0;
 	while (!glfwWindowShouldClose(window)) {
 		auto const nowTime = std::chrono::high_resolution_clock::now();
 		auto const deltaTimeUs = std::chrono::duration_cast<std::chrono::microseconds>(nowTime - lastTime);
@@ -215,16 +216,80 @@ edaf80::Assignment2::run()
 
 		if (interpolate) {
 			//! \todo Interpolate the movement of a shape between various
-			//!        control points.
+			//!        control points.		
 			if (use_linear) {
 				//! \todo Compute the interpolated position
 				//!       using the linear interpolation.
+				//calculate new position using linear interpolation
+				glm::vec3 p1;
+				//get the 1st position from the control_point_locations 
+				if ((posIndex + 1) >= control_point_locations.size())
+					p1 = control_point_locations[posIndex + 1 - control_point_locations.size()];	// avoid overflow and go back to the 1st position in the list
+				else
+					p1 = control_point_locations[posIndex + 1];
+
+				glm::vec3 p2;
+				//get the 2st position from the control_point_locations 
+				if ((posIndex + 2) >= control_point_locations.size())  p2 = control_point_locations[posIndex + 2 - control_point_locations.size()];
+				else p2 = control_point_locations[posIndex + 2];
+
+				glm::vec3 newPosition = interpolation::evalLERP(
+					p1,
+					p2,
+					time);
+
+				//translate the object to the new position
+				circle_rings.get_transform().SetTranslate(newPosition);
+				if (time < 1)
+				{
+					//let the object move slowly between 2 position for 100 iterations
+					time += 0.01;
+				}
+				else
+				{
+					//when the object reached the next position, increase the position index counter
+					posIndex += 1;
+
+					//avoid overflow
+					if (posIndex >= control_point_locations.size()) posIndex = 0;
+
+					//reset time
+					time = 0.0f;
+				}
 			}
 			else {
 				//! \todo Compute the interpolated position
 				//!       using the Catmull-Rom interpolation;
 				//!       use the `catmull_rom_tension`
 				//!       variable as your tension argument.
+				glm::vec3 p1;
+				if ((posIndex + 1) >= control_point_locations.size())  p1 = control_point_locations[posIndex + 1 - control_point_locations.size()];
+				else p1 = control_point_locations[posIndex + 1];
+				glm::vec3 p2;
+				if ((posIndex + 2) >= control_point_locations.size())  p2 = control_point_locations[posIndex + 2 - control_point_locations.size()];
+				else p2 = control_point_locations[posIndex + 2];
+				glm::vec3 p3;
+				if ((posIndex + 3) >= control_point_locations.size())  p3 = control_point_locations[posIndex + 3 - control_point_locations.size()];
+				else p3 = control_point_locations[posIndex + 3];
+
+				glm::vec3 newPosition = interpolation::evalCatmullRom(
+					control_point_locations[posIndex],
+					p1,
+					p2,
+					p3,
+					catmull_rom_tension,
+					time);
+				circle_rings.get_transform().SetTranslate(newPosition);
+				if (time < 1)
+				{
+					time += 0.01;
+				}
+				else
+				{
+					posIndex += 1;
+					if (posIndex >= control_point_locations.size()) posIndex = 0;
+					time = 0.0f;
+				}
 			}
 		}
 
