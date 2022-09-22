@@ -31,23 +31,26 @@ glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
 
 	glm::mat4 return_transform = parent_transform;
 	glm::mat4 world = parent_transform;
-	
+	glm::mat4 ringWorld = parent_transform;
 	
 	//A1:E3: 7th Calculate the tilting matrix for the orbit
 	world = glm::rotate(world, _body.orbit.inclination, glm::vec3(0.0f, 0.0f, 1.0f));
 	return_transform = glm::rotate(return_transform, _body.orbit.inclination, glm::vec3(0.0f, 0.0f, 1.0f));
+	ringWorld = glm::rotate(ringWorld, _body.orbit.inclination, glm::vec3(0.0f, 0.0f, 1.0f));
 	//A1:E3: 6th Calculate the orbit rotation
 	world = glm::rotate(world, _body.orbit.rotation_angle, glm::vec3(0.0f, 1.0f, 0.0f));
 	return_transform = glm::rotate(return_transform, _body.orbit.rotation_angle, glm::vec3(0.0f, 1.0f, 0.0f));
+	ringWorld = glm::rotate(ringWorld, _body.orbit.rotation_angle, glm::vec3(0.0f, 1.0f, 0.0f));
 	//A1_E3: 5th compute the translation matrix T0
 	world = glm::translate(world, glm::vec3(_body.orbit.radius, 0.0f, 0.0f));
 	return_transform = glm::translate(return_transform, glm::vec3(_body.orbit.radius, 0.0f, 0.0f));
-
+	ringWorld = glm::translate(ringWorld, glm::vec3(_body.orbit.radius, 0.0f, 0.0f));
 	//A1_E8: 4th rotate back to original position after creating the orbit. From here, create the spin property so that the tilt rotation will be independent
 	world = glm::rotate(world, -_body.orbit.rotation_angle, glm::vec3(0.0f, 1.0f, 0.0f));
 
 	//A1_E2: 3rd compute the rotation matrix R2s and overwirte the world matrix by it. This should be the 1st rotation since we want to create the tilt for the earth 
 	world = glm::rotate(world, _body.spin.axial_tilt, glm::vec3(0.0f, 0.0f, 1.0f));
+	ringWorld = glm::rotate(ringWorld, _body.spin.axial_tilt, glm::vec3(0.0f, 0.0f, 1.0f));
 	//A1_E2: 2nd compute the rotation matrix R1s. This should be the 2st rotation since we want to create the earth to spin around the y-axis
 	world = glm::rotate(world, _body.spin.rotation_angle, glm::vec3(0.0f, 1.0f, 0.0f));
 
@@ -72,8 +75,8 @@ glm::mat4 CelestialBody::render(std::chrono::microseconds elapsed_time,
 	if (true == _ring.is_set)
 	{
 		//Lastly apply all the parent transformations
-		glm::mat4 ringWorld = return_transform;
-		//secondly rotate the ring by 90 degree around the x-axis
+		
+		//secondly rotate the ring by 90 degree around the x-axisr
 		ringWorld = glm::rotate(ringWorld, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 		//Firstly scale the ring (in programming, the order need to be reversed)
 		ringWorld = glm::scale(ringWorld, glm::vec3(_ring.scale.x, _ring.scale.y, 0.0f));
