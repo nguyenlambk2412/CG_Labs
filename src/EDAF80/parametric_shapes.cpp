@@ -14,25 +14,70 @@ parametric_shapes::createQuad(float const width, float const height,
                               unsigned int const horizontal_split_count,
                               unsigned int const vertical_split_count)
 {
-	auto const vertices = std::array<glm::vec3, 4>{
-		glm::vec3(0.0f,  0.0f,   0.0f),
-		glm::vec3(width, 0.0f,   0.0f),
-		glm::vec3(width, height, 0.0f),
-		glm::vec3(0.0f,  height, 0.0f)
+	bonobo::mesh_data data;
+	/*auto const vertices = std::array<glm::vec3, 4>{
+		glm::vec3(0.0f, 0.0f, 0.0f),
+			glm::vec3(width, 0.0f, 0.0f),
+			glm::vec3(width, height, 0.0f),
+			glm::vec3(0.0f, height, 0.0f)
 	};
-
+	data.vertices_nb = 4;
 	auto const index_sets = std::array<glm::uvec3, 2>{
 		glm::uvec3(0u, 1u, 2u),
-		glm::uvec3(0u, 2u, 3u)
+			glm::uvec3(0u, 2u, 3u)
 	};
+	data.indices_nb = 6;*/
+	//A4_E1: create the quad on XZ plane
+	// calculate the number of edges from the number of split
+	auto const horizontal_slice_edges_count = horizontal_split_count + 1u;
+	auto const vertical_slice_edges_count = vertical_split_count + 1u;
+	// calculate the number of vertices from the number of edges
+	auto const horizontal_slice_vertices_count = horizontal_slice_edges_count + 1u;
+	auto const vertical_slice_vertices_count = vertical_slice_edges_count + 1u;
+	data.vertices_nb = horizontal_slice_vertices_count * vertical_slice_vertices_count;
+	
+	//create buffer for position, texture coordinates, normals, tangents and binormals.
+	auto vertices = std::vector<glm::vec3>(data.vertices_nb);
+	
+	data.indices_nb = horizontal_slice_edges_count * vertical_slice_edges_count * 2*3;
+	auto index_sets = std::vector<glm::uvec3>(horizontal_slice_edges_count * vertical_slice_edges_count * 2);
+	
+	
+	//tesselation
+	unsigned int index = 0;
+	for (unsigned int i = 0; i < vertical_slice_vertices_count; ++i)
+	{
+		for (unsigned int j = 0; j < horizontal_slice_vertices_count; ++j)
+		{
+			vertices[index] = glm::vec3(width*j/ horizontal_slice_edges_count, 0.0f, height*i/ vertical_slice_edges_count);
+	
+			index++;	// Next vertex
+		}
+	}
+	// generate indices iteratively
+	
+	index = 0u;
+	for (unsigned int i = 0u; i < vertical_slice_edges_count; ++i)
+	{
+		for (unsigned int j = 0u; j < horizontal_slice_edges_count; ++j)
+		{
+			index_sets[index] = glm::uvec3(vertical_slice_vertices_count * (i + 0u) + (j + 0u),
+				vertical_slice_vertices_count * (i + 1u) + (j + 1u),
+				vertical_slice_vertices_count * (i + 1u) + (j + 0u));
+			++index;
+	
+			index_sets[index] = glm::uvec3(vertical_slice_vertices_count * (i + 0u) + (j + 0u),
+				vertical_slice_vertices_count * (i + 0u) + (j + 1u),
+				vertical_slice_vertices_count * (i + 1u) + (j + 1u));
+			++index;
+		}
+	}
 
-	bonobo::mesh_data data;
-
-	if (horizontal_split_count > 0u || vertical_split_count > 0u)
+	/*if (horizontal_split_count > 0u || vertical_split_count > 0u)
 	{
 		LogError("parametric_shapes::createQuad() does not support tesselation.");
 		return data;
-	}
+	}*/
 
 	//
 	// NOTE:
@@ -69,7 +114,7 @@ parametric_shapes::createQuad(float const width, float const height,
 	// and therefore bind the buffer to the corresponding target.
 	glBindBuffer(GL_ARRAY_BUFFER, /*! \todo bind the previously generated Buffer */data.bo);
 
-	glBufferData(GL_ARRAY_BUFFER, /*! \todo how many bytes should the buffer contain? */4 * sizeof(glm::vec3),
+	glBufferData(GL_ARRAY_BUFFER, /*! \todo how many bytes should the buffer contain? */data.vertices_nb * sizeof(glm::vec3),
 	             /* where is the data stored on the CPU? */vertices.data(),
 	             /* inform OpenGL that the data is modified once, but used often */GL_STATIC_DRAW);
 
@@ -108,12 +153,10 @@ parametric_shapes::createQuad(float const width, float const height,
 	// elements, aka. indices!
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, /*! \todo bind the previously generated Buffer */data.ibo);
 
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, /*! \todo how many bytes should the buffer contain? */2 * sizeof(glm::uvec3),
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, /*! \todo how many bytes should the buffer contain? */static_cast<GLsizeiptr>(index_sets.size() * sizeof(glm::uvec3)),
 	             /* where is the data stored on the CPU? */index_sets.data(),
 	             /* inform OpenGL that the data is modified once, but used often */GL_STATIC_DRAW);
-
-	data.indices_nb = /*! \todo how many indices do we have? */6u;
-
+	
 	// All the data has been recorded, we can unbind them.
 	glBindVertexArray(0u);
 	glBindBuffer(GL_ARRAY_BUFFER, 0u);

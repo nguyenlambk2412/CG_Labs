@@ -40,7 +40,7 @@ void
 edaf80::Assignment4::run()
 {
 	// Set up the camera
-	mCamera.mWorld.SetTranslate(glm::vec3(-40.0f, 14.0f, 6.0f));
+	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, 0.0f, 6.0f));
 	mCamera.mWorld.LookAt(glm::vec3(0.0f));
 	mCamera.mMouseSensitivity = glm::vec2(0.003f);
 	mCamera.mMovementSpeed = glm::vec3(3.0f); // 3 m/s => 10.8 km/h
@@ -62,12 +62,78 @@ edaf80::Assignment4::run()
 	// Todo: Insert the creation of other shader programs.
 	//       (Check how it was done in assignment 3.)
 	//
+	// create skybox shader
+	GLuint skybox_shader = 0u;
+	program_manager.CreateAndRegisterProgram("Skybox",
+											{ { ShaderType::vertex, "EDAF80/skybox.vert" },
+											{ ShaderType::fragment, "EDAF80/skybox.frag" } },
+											skybox_shader);
+	if (skybox_shader == 0u) {
+		LogError("Failed to load fallback shader");
+		return;
+	}
+
+	// create water shader
+	GLuint water_shader = 0u;
+	program_manager.CreateAndRegisterProgram("Water",
+											{ { ShaderType::vertex, "EDAF80/water.vert" },
+											{ ShaderType::fragment, "EDAF80/water.frag" } },
+											water_shader);
+	if (water_shader == 0u) {
+		LogError("Failed to load fallback shader");
+		return;
+	}
+
+	// load textures for the skybox
+	GLuint skyboxTexture = bonobo::loadTextureCubeMap(config::resources_path("cubemaps/NissiBeach2/posx.jpg"),
+		config::resources_path("cubemaps/NissiBeach2/negx.jpg"),
+		config::resources_path("cubemaps/NissiBeach2/posy.jpg"),
+		config::resources_path("cubemaps/NissiBeach2/negy.jpg"),
+		config::resources_path("cubemaps/NissiBeach2/posz.jpg"),
+		config::resources_path("cubemaps/NissiBeach2/negz.jpg"), false);
 
 	float elapsed_time_s = 0.0f;
 
 	//
 	// Todo: Load your geometry
 	//
+	// create the skybox shape
+	auto skybox_shape = parametric_shapes::createSphere(20.0f, 100u, 100u);
+	if (skybox_shape.vao == 0u) {
+		LogError("Failed to retrieve the mesh for the skybox");
+		return;
+	}
+
+	auto light_position = glm::vec3(-2.0f, 4.0f, 2.0f);
+	auto const set_uniforms = [&light_position](GLuint program) {
+		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));
+	};
+
+	Node skybox;
+	skybox.set_geometry(skybox_shape);
+	skybox.set_program(&skybox_shader, set_uniforms);
+	//A3_E2: set the skyboxTexture uniform with loaded skyboxTexture in the type of CUBE MAP
+	skybox.add_texture("skyboxTexture", skyboxTexture, GL_TEXTURE_CUBE_MAP);
+
+	//create the water shape
+	auto demo_shape = parametric_shapes::createQuad(100.0f, 100.0f, 1000u, 1000u);
+	if (demo_shape.vao == 0u) {
+		LogError("Failed to retrieve the mesh for the demo sphere");
+		return;
+	}
+
+	//water uniforms
+	auto const set_waterUniforms = [&light_position , &elapsed_time_s](GLuint program) {
+		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));
+		glUniform1f(glGetUniformLocation(program, "t"), elapsed_time_s);
+	};
+
+	GLuint objectNormalTexture = bonobo::loadTexture2D(config::resources_path("textures/waves.png"), false);
+	Node demo_water;
+	demo_water.set_geometry(demo_shape);
+	demo_water.set_program(&water_shader, set_waterUniforms);
+	demo_water.add_texture("normTexture", objectNormalTexture, GL_TEXTURE_2D);
+
 
 	glClearDepthf(1.0f);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -150,6 +216,8 @@ edaf80::Assignment4::run()
 			//
 			// Todo: Render all your geometry here.
 			//
+			skybox.render(mCamera.GetWorldToClipMatrix());
+			demo_water.render(mCamera.GetWorldToClipMatrix());
 		}
 
 
