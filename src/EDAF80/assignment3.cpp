@@ -94,7 +94,7 @@ edaf80::Assignment3::run()
 	}
 	//A3_E3: Create phong shaders
 	GLuint phong_shader = 0u;
-	program_manager.CreateAndRegisterProgram("Skybox",
+	program_manager.CreateAndRegisterProgram("phong",
 											{ { ShaderType::vertex, "EDAF80/phong.vert" },
 											{ ShaderType::fragment, "EDAF80/phong.frag" } },
 											phong_shader);
