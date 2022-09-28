@@ -362,7 +362,22 @@ bonobo::createTexture(uint32_t width, uint32_t height, GLenum target, GLint inte
 	glGenTextures(1, &texture);
 	assert(texture != 0u);
 	glBindTexture(target, texture);
-	glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	/*A3: glTexParameteri
+		1st argument: specifies the texture target: GL_TEXTURE_2D
+		2nd argument: option we want to set and for which texture axis
+				GL_TEXTURE_WRAP_S
+				GL_TEXTURE_WRAP_T
+					3rd argument: the texture wrapping mode
+							GL_REPEAT: The default behavior for textures. Repeats the texture image.
+							GL_MIRRORED_REPEAT: Same as GL_REPEAT but mirrors the image with each repeat.
+							GL_CLAMP_TO_EDGE: Clamps the coordinates
+							GL_CLAMP_TO_BORDER: Coordinates outside the range are now given a user-specified border color.
+				GL_TEXTURE_MIN_FILTER: when scaling down
+				GL_TEXTURE_MAG_FILTER : when scaling up
+					3rd argument:
+							GL_NEAREST: selects the texel that center is closest to the texture coordinate
+							GL_LINEAR:	selects the texel that center is closest to the texture coordinate*/
+	glTexParameteri(target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);	
 	glTexParameteri(target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	switch (target) {
 	case GL_TEXTURE_1D:
@@ -411,7 +426,7 @@ bonobo::loadTextureCubeMap(std::string const& posx, std::string const& negx,
 	// and `glGenBuffers()` that were used in assignment 2,
 	// `glGenTextures()` can create `n` texture objects at once. Here we
 	// only one texture object that will contain our whole cube map.
-	glGenTextures(1, /*! \todo fill me */nullptr);
+	glGenTextures(1, /*! \todo fill me */&texture);
 	assert(texture != 0u);
 
 	// Similarly to vertex arrays and buffers, we first need to bind the
@@ -463,6 +478,42 @@ bonobo::loadTextureCubeMap(std::string const& posx, std::string const& negx,
 	             /* the pointer to the actual data on the CPU */reinterpret_cast<GLvoid const*>(data.data()));
 
 	//! \todo repeat now the texture filling for the 5 remaining faces
+	//A3_E2: load textures for each face of the skybox
+	data = getTextureData(posx, width, height, false);
+	if (data.empty()) {
+		glDeleteTextures(1, &texture);
+		return 0u;
+	}
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X, 0, GL_RGBA, static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0, GL_RGBA, GL_UNSIGNED_BYTE, reinterpret_cast<GLvoid const*>(data.data()));
+	//A3_E2: load textures for each face of the skybox
+	data = getTextureData(negy, width, height, false);
+	if (data.empty()) {
+		glDeleteTextures(1, &texture);
+		return 0u;
+	}
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, 0, GL_RGBA, static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0, GL_RGBA, GL_UNSIGNED_BYTE, reinterpret_cast<GLvoid const*>(data.data()));
+	//A3_E2: load textures for each face of the skybox
+	data = getTextureData(posy, width, height, false);
+	if (data.empty()) {
+		glDeleteTextures(1, &texture);
+		return 0u;
+	}
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y, 0, GL_RGBA, static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0, GL_RGBA, GL_UNSIGNED_BYTE, reinterpret_cast<GLvoid const*>(data.data()));
+	//A3_E2: load textures for each face of the skybox
+	data = getTextureData(negz, width, height, false);
+	if (data.empty()) {
+		glDeleteTextures(1, &texture);
+		return 0u;
+	}
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 0, GL_RGBA, static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0, GL_RGBA, GL_UNSIGNED_BYTE, reinterpret_cast<GLvoid const*>(data.data()));
+	//A3_E2: load textures for each face of the skybox
+	data = getTextureData(posz, width, height, false);
+	if (data.empty()) {
+		glDeleteTextures(1, &texture);
+		return 0u;
+	}
+	glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 0, GL_RGBA, static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0, GL_RGBA, GL_UNSIGNED_BYTE, reinterpret_cast<GLvoid const*>(data.data()));
+
 
 	if (generate_mipmap)
 		// Generate the mipmap hierarchy; wait for EDAN35 to understand

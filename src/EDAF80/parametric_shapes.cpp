@@ -165,6 +165,10 @@ parametric_shapes::createSphere(float const radius,
 			vertices[index] = glm::vec3(radius * sin_theta * sin_phi,
 				-radius * cos_phi,
 				radius * cos_theta * sin_phi);
+			//A3_E1: Texture coordinates
+			texcoords[index] = glm::vec3(static_cast<float>(j) / (static_cast<float>(latitude_slice_vertices_count)),
+										static_cast<float>(i) / (static_cast<float>(longitude_slice_vertices_count)),
+										0.0f);
 
 			// tangent
 			// Simplify
