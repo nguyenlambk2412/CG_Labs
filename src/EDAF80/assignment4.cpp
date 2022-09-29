@@ -69,7 +69,7 @@ edaf80::Assignment4::run()
 											{ ShaderType::fragment, "EDAF80/skybox.frag" } },
 											skybox_shader);
 	if (skybox_shader == 0u) {
-		LogError("Failed to load fallback shader");
+		LogError("Failed to load Skybox shader");
 		return;
 	}
 
@@ -80,7 +80,7 @@ edaf80::Assignment4::run()
 											{ ShaderType::fragment, "EDAF80/water.frag" } },
 											water_shader);
 	if (water_shader == 0u) {
-		LogError("Failed to load fallback shader");
+		LogError("Failed to load Water shader");
 		return;
 	}
 
@@ -123,16 +123,18 @@ edaf80::Assignment4::run()
 	}
 
 	//water uniforms
-	auto const set_waterUniforms = [&light_position , &elapsed_time_s](GLuint program) {
+	auto const set_waterUniforms = [&light_position , &elapsed_time_s, &camera_position](GLuint program) {
 		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));
 		glUniform1f(glGetUniformLocation(program, "t"), elapsed_time_s);
+		glUniform3fv(glGetUniformLocation(program, "camera_position"), 1, glm::value_ptr(camera_position));
 	};
 
 	GLuint objectNormalTexture = bonobo::loadTexture2D(config::resources_path("textures/waves.png"), false);
 	Node demo_water;
 	demo_water.set_geometry(demo_shape);
 	demo_water.set_program(&water_shader, set_waterUniforms);
-	demo_water.add_texture("normTexture", objectNormalTexture, GL_TEXTURE_2D);
+	demo_water.add_texture("skybox", skyboxTexture, GL_TEXTURE_CUBE_MAP);
+	demo_water.add_texture("normalMap", objectNormalTexture, GL_TEXTURE_2D);
 
 
 	glClearDepthf(1.0f);
