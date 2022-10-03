@@ -1,16 +1,22 @@
 #include "assignment5.hpp"
 
+#include "parametric_shapes.hpp"
+
 #include "config.hpp"
 #include "core/Bonobo.h"
 #include "core/FPSCamera.h"
 #include "core/helpers.hpp"
+#include "core/node.hpp"
 #include "core/ShaderProgramManager.hpp"
 
+#include <glm/gtc/type_ptr.hpp>
 #include <imgui.h>
 #include <tinyfiledialogs.h>
 
 #include <clocale>
 #include <stdexcept>
+
+
 
 edaf80::Assignment5::Assignment5(WindowManager& windowManager) :
 	mCamera(0.5f * glm::half_pi<float>(),
@@ -38,17 +44,19 @@ edaf80::Assignment5::run()
 {
 	// Set up the camera
 	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, 0.0f, 6.0f));
+	mCamera.mWorld.LookAt(glm::vec3(0.0f));
 	mCamera.mMouseSensitivity = glm::vec2(0.003f);
 	mCamera.mMovementSpeed = glm::vec3(3.0f); // 3 m/s => 10.8 km/h
+	auto camera_position = mCamera.mWorld.GetTranslation();
 
 	// Create the shader programs
 	ShaderProgramManager program_manager;
-	GLuint fallback_shader = 0u;
-	program_manager.CreateAndRegisterProgram("Fallback",
-	                                         { { ShaderType::vertex, "common/fallback.vert" },
-	                                           { ShaderType::fragment, "common/fallback.frag" } },
-	                                         fallback_shader);
-	if (fallback_shader == 0u) {
+	GLuint skybox_shader = 0u;
+	program_manager.CreateAndRegisterProgram("skybox",
+	                                         { { ShaderType::vertex, "EDAF80/skybox.vert" },
+	                                           { ShaderType::fragment, "EDAF80/skybox.frag" } },
+											skybox_shader);
+	if (skybox_shader == 0u) {
 		LogError("Failed to load fallback shader");
 		return;
 	}
@@ -58,9 +66,37 @@ edaf80::Assignment5::run()
 	//       (Check how it was done in assignment 3.)
 	//
 
+	//// load textures
+	//for the skybox
+	GLuint skyboxTexture = bonobo::loadTextureCubeMap(config::resources_path("cubemaps/Universe/right.png"),
+		config::resources_path("cubemaps/Universe/left.png"),
+		config::resources_path("cubemaps/Universe/front.png"),
+		config::resources_path("cubemaps/Universe/back.png"),
+		config::resources_path("cubemaps/Universe/bottom.png"),
+		config::resources_path("cubemaps/Universe/top.png"), false);
+
+	////Main light source
+	auto light_position = glm::vec3(-2.0f, 4.0f, 2.0f);
+	auto const set_uniforms = [&light_position](GLuint program) {
+		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));
+	};
+
 	//
 	// Todo: Load your geometry
 	//
+	// create the skybox shape
+	auto skybox_shape = parametric_shapes::createSphere(20.0f, 100u, 100u);
+	if (skybox_shape.vao == 0u) {
+		LogError("Failed to retrieve the mesh for the skybox");
+		return;
+	}
+
+	//// Object Node
+	// Skybox
+	Node skybox;
+	skybox.set_geometry(skybox_shape);
+	skybox.set_program(&skybox_shader, set_uniforms);
+	skybox.add_texture("skyboxTexture", skyboxTexture, GL_TEXTURE_CUBE_MAP);
 
 	glClearDepthf(1.0f);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -130,6 +166,7 @@ edaf80::Assignment5::run()
 			//
 			// Todo: Render all your geometry here.
 			//
+			skybox.render(mCamera.GetWorldToClipMatrix());
 		}
 
 
