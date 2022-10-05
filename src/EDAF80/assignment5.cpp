@@ -58,20 +58,20 @@ edaf80::Assignment5::run()
 	                                           { ShaderType::fragment, "EDAF80/skybox.frag" } },
 											skybox_shader);
 	if (skybox_shader == 0u) {
-		LogError("Failed to load fallback shader");
+		LogError("Failed to load skybox shader");
 		return;
 	}
 
-	////spaceShip shader
-	//GLuint spaceship_shader = 0u;
-	//program_manager.CreateAndRegisterProgram("spaceship",
-	//	{ { ShaderType::vertex, "common/fallback.vert" },
-	//	  { ShaderType::fragment, "common/fallback.frag" } },
-	//	spaceship_shader);
-	//if (spaceship_shader == 0u) {
-	//	LogError("Failed to load fallback shader");
-	//	return;
-	//}
+	//spaceShip shader
+	GLuint spaceship_shader = 0u;
+	program_manager.CreateAndRegisterProgram("spaceship",
+		{ { ShaderType::vertex, "EDAF80/A5_SpaceShip.vert" },
+		  { ShaderType::fragment, "EDAF80/A5_SpaceShip.frag" } },
+		spaceship_shader);
+	if (spaceship_shader == 0u) {
+		LogError("Failed to load spaceship shader");
+		return;
+	}
 
 	//asteriod shader
 	GLuint asteroid_shader = 0u;
@@ -80,7 +80,7 @@ edaf80::Assignment5::run()
 		  { ShaderType::fragment, "EDAF80/A5_Object.frag" } },
 		asteroid_shader);
 	if (asteroid_shader == 0u) {
-		LogError("Failed to load fallback shader");
+		LogError("Failed to load asteroid shader");
 		return;
 	}
 
@@ -97,17 +97,32 @@ edaf80::Assignment5::run()
 		config::resources_path("cubemaps/Universe/back.png"),
 		config::resources_path("cubemaps/Universe/bottom.png"), 
 		config::resources_path("cubemaps/Universe/top.png"), false);
+
 	GLuint asteroidDiffTex = bonobo::loadTexture2D(config::resources_path("scenes/asteroid_1/textures/asteroid_baked_diffuse.png"), false);
 	GLuint asteroidSpecTex = bonobo::loadTexture2D(config::resources_path("scenes/asteroid_1/textures/asteroid_baked_ao.png"), false);
 	GLuint asteroidNormTex = bonobo::loadTexture2D(config::resources_path("scenes/asteroid_1/textures/asteroid_baked_normals.png"), false);
 
+	GLuint Albedo_Engine					= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Albedo_Engine.png"), false);
+	GLuint Albedo_Ship						= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Albedo_Ship.png"), false);
+	GLuint AmbientOclussion_Engine			= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/AmbientOclussion_Engine.png"), false);
+	GLuint AmbientOclussion_Ship			= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/AmbientOclussion_Ship.png"), false);
+	GLuint Emissive_Engine					= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Emissive_Engine.png"), false);
+	GLuint Emissive_Ship					= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Emissive_Ship.png"), false);
+	GLuint Mask_Engine = bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Mask_Translucent_Rejilla_Engine.png"), false);
+	GLuint Metallic_Engine					= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Metallic_Engine.png"), false);
+	GLuint Metallic_Ship					= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Metallic_Ship.png"), false);
+	GLuint Normal_Engine_PostProdc			= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Normal_Engine_PostProdc.png"), false);
+	GLuint Normal_Ship_PostProdc			= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Normal_Ship_PostProdc.png"), false);
+	GLuint Roughness_Engine					= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Roughness_Engine.png"), false);
+	GLuint Roughness_Ship					= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Roughness_Ship.png"), false);
+
 
 	////uniforms
 	//lights
-	bool use_normal_mapping = false;
+	int meshID = 0;
 	auto light_position = glm::vec3(-2.0f, 4.0f, 2.0f);
-	auto const phong_set_uniforms = [&use_normal_mapping, &light_position, &camera_position](GLuint program) {
-		glUniform1i(glGetUniformLocation(program, "use_normal_mapping"), use_normal_mapping ? 1 : 0);
+	auto const phong_set_uniforms = [&meshID, &light_position, &camera_position](GLuint program) {
+		glUniform1i(glGetUniformLocation(program, "mesh_id"), meshID);
 		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));
 		glUniform3fv(glGetUniformLocation(program, "camera_position"), 1, glm::value_ptr(camera_position));
 	};
@@ -123,12 +138,11 @@ edaf80::Assignment5::run()
 	}
 
 	// create the spaceship
-	/*std::vector<bonobo::mesh_data> const spaceShipObj = bonobo::loadObjects(config::resources_path("scenes/starfighter_1/MorphiOBJ.obj"));
+	std::vector<bonobo::mesh_data> const spaceShipObj = bonobo::loadObjects(config::resources_path("ObjectModel/spaceship/source/Ship.obj"));
 	if (spaceShipObj.empty()) {
 		LogError("Failed to load the sphere geometry: exiting.");
 		return;
 	}
-	bonobo::mesh_data const& spaceShip_shape = spaceShipObj.front();*/
 
 	// create the asteriod
 	std::vector<bonobo::mesh_data> const asteriodObj = bonobo::loadObjects(config::resources_path("scenes/asteroid_1/source/asteroid.obj"));
@@ -147,10 +161,25 @@ edaf80::Assignment5::run()
 	skybox.add_texture("skyboxTexture", skyboxTexture, GL_TEXTURE_CUBE_MAP);
 
 	//SpaceShip
-	/*Node spaceship;
-	spaceship.set_geometry(spaceShip_shape);
-	spaceship.set_program(&spaceship_shader);*/
+	Node spaceship;
+	
+	spaceship.set_program(&spaceship_shader, phong_set_uniforms);
+	spaceship.add_texture("albedoEngTex", Albedo_Engine, GL_TEXTURE_2D);
+	spaceship.add_texture("ambientEngTex", AmbientOclussion_Engine, GL_TEXTURE_2D);
+	spaceship.add_texture("metalicEngTex", Metallic_Engine, GL_TEXTURE_2D);
+	spaceship.add_texture("normalEngTex", Normal_Engine_PostProdc, GL_TEXTURE_2D);
+	spaceship.add_texture("roughnesssEngTex", Roughness_Engine, GL_TEXTURE_2D);
+	spaceship.add_texture("albedoBodyTex", Albedo_Ship, GL_TEXTURE_2D);
+	spaceship.add_texture("ambientBodyTex", AmbientOclussion_Ship, GL_TEXTURE_2D);
+	spaceship.add_texture("metalicBodyTex", Metallic_Ship, GL_TEXTURE_2D);
+	spaceship.add_texture("normalBodyTex", Normal_Ship_PostProdc, GL_TEXTURE_2D);
+	spaceship.add_texture("roughnesssBodyTex", Roughness_Ship, GL_TEXTURE_2D);
 
+	spaceship.add_texture("emissEngTex", Emissive_Engine, GL_TEXTURE_2D);
+	spaceship.add_texture("emissBodyTex", Emissive_Ship, GL_TEXTURE_2D);
+	spaceship.add_texture("maskEngTex", Mask_Engine, GL_TEXTURE_2D);
+
+	
 	//Asteroid
 	Node asteroid;
 	asteroid.set_geometry(asteroid_shape);
@@ -159,10 +188,21 @@ edaf80::Assignment5::run()
 	asteroid.add_texture("specTexture", asteroidSpecTex, GL_TEXTURE_2D);
 	asteroid.add_texture("normTexture", asteroidNormTex, GL_TEXTURE_2D);
 
+
+	///Lock location for the space ship
+	glm::mat4 spaceshipTransform = glm::mat4(1.0f);
+	spaceshipTransform = glm::translate(spaceshipTransform, glm::vec3(0.0f, 0.0f, 0.0f));
+	spaceshipTransform = glm::scale(spaceshipTransform, glm::vec3(0.1));
+
+	///Asteroid location for the space ship
+	glm::mat4 asteroidTransform = glm::mat4(1.0f);
+	asteroidTransform = glm::translate(asteroidTransform, glm::vec3(0.0f, 0.0f, -15.0f));
+	asteroidTransform = glm::scale(asteroidTransform, glm::vec3(0.3));
+	
+
 	glClearDepthf(1.0f);
 	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 	glEnable(GL_DEPTH_TEST);
-
 
 	auto lastTime = std::chrono::high_resolution_clock::now();
 
@@ -228,8 +268,28 @@ edaf80::Assignment5::run()
 			// Todo: Render all your geometry here.
 			//
 			skybox.render(mCamera.GetWorldToClipMatrix());
-			//spaceship.render(mCamera.GetWorldToClipMatrix());
-			asteroid.render(mCamera.GetWorldToClipMatrix());
+
+			///render the spaceship
+			//Render mesh by mesh
+			
+			for (unsigned int i = 0; i < spaceShipObj.size(); i++)
+			{
+				spaceship.set_geometry(spaceShipObj[i]);
+				if ("Low_Vehicle_Circle.014" == spaceShipObj[i].name)
+				{
+					meshID = 0;
+				}
+				else if ("Low_Engine_Circle.030" == spaceShipObj[i].name)
+				{
+					meshID = 1;
+				}
+				else
+				{
+					meshID = 2;
+				}
+				spaceship.render(mCamera.GetWorldToClipMatrix(), spaceshipTransform);
+			}
+			asteroid.render(mCamera.GetWorldToClipMatrix(), asteroidTransform);
 		}
 
 
