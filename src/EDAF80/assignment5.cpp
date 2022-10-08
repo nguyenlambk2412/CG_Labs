@@ -43,7 +43,7 @@ void
 edaf80::Assignment5::run()
 {
 	// Set up the camera
-	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, 0.0f, 6.0f));
+	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, -4.0f, 10.0f));
 	mCamera.mWorld.LookAt(glm::vec3(0.0f));
 	mCamera.mMouseSensitivity = glm::vec2(0.003f);
 	mCamera.mMovementSpeed = glm::vec3(3.0f); // 3 m/s => 10.8 km/h
@@ -191,7 +191,8 @@ edaf80::Assignment5::run()
 
 	///Lock location for the space ship
 	glm::mat4 spaceshipTransform = glm::mat4(1.0f);
-	spaceshipTransform = glm::translate(spaceshipTransform, glm::vec3(0.0f, 0.0f, 0.0f));
+	spaceshipTransform = glm::rotate(spaceshipTransform,glm::radians(30.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+	spaceshipTransform = glm::translate(spaceshipTransform, glm::vec3(0.0f, -5.0f, 10.0f));
 	spaceshipTransform = glm::scale(spaceshipTransform, glm::vec3(0.1));
 
 	///Asteroid location for the space ship
@@ -224,6 +225,7 @@ edaf80::Assignment5::run()
 		glfwPollEvents();
 		inputHandler.Advance();
 		mCamera.Update(deltaTimeUs, inputHandler);
+		mCamera.mWorld.LookAt(glm::vec3(0.0f));
 
 		if (inputHandler.GetKeycodeState(GLFW_KEY_R) & JUST_PRESSED) {
 			shader_reload_failed = !program_manager.ReloadAllPrograms();

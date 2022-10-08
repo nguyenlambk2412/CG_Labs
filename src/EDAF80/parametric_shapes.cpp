@@ -39,6 +39,9 @@ parametric_shapes::createQuad(float const width, float const height,
 	//create buffer for position, texture coordinates, normals, tangents and binormals.
 	auto vertices = std::vector<glm::vec3>(data.vertices_nb);
 	auto texcoords = std::vector<glm::vec3>(data.vertices_nb);
+	auto normals = std::vector<glm::vec3>(data.vertices_nb);
+	auto tangents = std::vector<glm::vec3>(data.vertices_nb);
+	auto binormals = std::vector<glm::vec3>(data.vertices_nb);
 	data.indices_nb = horizontal_slice_edges_count * vertical_slice_edges_count * 2*3;
 	auto index_sets = std::vector<glm::uvec3>(horizontal_slice_edges_count * vertical_slice_edges_count * 2);
 	
@@ -54,6 +57,10 @@ parametric_shapes::createQuad(float const width, float const height,
 			texcoords[index] = glm::vec3(static_cast<float>(j) / (static_cast<float>(horizontal_slice_edges_count)),
 				static_cast<float>(i) / (static_cast<float>(vertical_slice_edges_count)),
 				0.0f);
+
+			normals[index] = glm::vec3(0.0f, 1.0f, 0.0f);
+			tangents[index] = glm::vec3(0.0f, 0.0f, 1.0f);
+			binormals[index] = glm::vec3(1.0f, 0.0f, 0.0f);
 			index++;	// Next vertex
 		}
 	}
@@ -79,13 +86,22 @@ parametric_shapes::createQuad(float const width, float const height,
 	// calculate offset and size for each data buffer: position, normal vector, texture coordinate, tangent and binormal
 	auto const vertices_offset = 0u;
 	auto const vertices_size = static_cast<GLsizeiptr>(vertices.size() * sizeof(glm::vec3));
-	
-	auto const texcoords_offset = vertices_offset + vertices_size;
+	auto const normals_offset = vertices_size;
+	auto const normals_size = static_cast<GLsizeiptr>(normals.size() * sizeof(glm::vec3));
+	auto const texcoords_offset = normals_offset + normals_size;
 	auto const texcoords_size = static_cast<GLsizeiptr>(texcoords.size() * sizeof(glm::vec3));
+	auto const tangents_offset = texcoords_offset + texcoords_size;
+	auto const tangents_size = static_cast<GLsizeiptr>(tangents.size() * sizeof(glm::vec3));
+	auto const binormals_offset = tangents_offset + tangents_size;
+	auto const binormals_size = static_cast<GLsizeiptr>(binormals.size() * sizeof(glm::vec3));
 	
 	// the size of the data buffer will be the summary of all buffers
-	auto const bo_size = static_cast<GLsizeiptr>(vertices_size + texcoords_size);
-
+	auto const bo_size = static_cast<GLsizeiptr>(vertices_size
+		+ normals_size
+		+ texcoords_size
+		+ tangents_size
+		+ binormals_size
+		);
 	/*if (horizontal_split_count > 0u || vertical_split_count > 0u)
 	{
 		LogError("parametric_shapes::createQuad() does not support tesselation.");
@@ -127,16 +143,27 @@ parametric_shapes::createQuad(float const width, float const height,
 	// and therefore bind the buffer to the corresponding target.
 	glBindBuffer(GL_ARRAY_BUFFER, /*! \todo bind the previously generated Buffer */data.bo);
 	glBufferData(GL_ARRAY_BUFFER, bo_size, nullptr, GL_STATIC_DRAW);
+	
 	//put the vertex data into the buffer.
 	glBufferSubData(GL_ARRAY_BUFFER, vertices_offset, vertices_size, static_cast<GLvoid const*>(vertices.data()));
 	glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::vertices));
 	glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::vertices), 3, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<GLvoid const*>(0x0));
-
+	//put the normal data into the buffer.
+	glBufferSubData(GL_ARRAY_BUFFER, normals_offset, normals_size, static_cast<GLvoid const*>(normals.data()));
+	glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::normals));
+	glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::normals), 3, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<GLvoid const*>(normals_offset));
 	//put the textures coordinates into the buffer.
 	glBufferSubData(GL_ARRAY_BUFFER, texcoords_offset, texcoords_size, static_cast<GLvoid const*>(texcoords.data()));
 	glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::texcoords));
 	glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::texcoords), 3, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<GLvoid const*>(texcoords_offset));
-	
+	//put the tangenet data into the buffer.
+	glBufferSubData(GL_ARRAY_BUFFER, tangents_offset, tangents_size, static_cast<GLvoid const*>(tangents.data()));
+	glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::tangents));
+	glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::tangents), 3, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<GLvoid const*>(tangents_offset));
+	//put the binormal data into the buffer.
+	glBufferSubData(GL_ARRAY_BUFFER, binormals_offset, binormals_size, static_cast<GLvoid const*>(binormals.data()));
+	glEnableVertexAttribArray(static_cast<unsigned int>(bonobo::shader_bindings::binormals));
+	glVertexAttribPointer(static_cast<unsigned int>(bonobo::shader_bindings::binormals), 3, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<GLvoid const*>(binormals_offset));
 	// Now, let's allocate a second one for the indices.
 	//
 	// Have the buffer's name stored into `data.ibo`.

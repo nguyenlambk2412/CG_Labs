@@ -40,7 +40,7 @@ void
 edaf80::Assignment4::run()
 {
 	// Set up the camera
-	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, 0.0f, 6.0f));
+	mCamera.mWorld.SetTranslate(glm::vec3(2.0f, 1.0f, 8.0f));
 	mCamera.mWorld.LookAt(glm::vec3(0.0f));
 	mCamera.mMouseSensitivity = glm::vec2(0.003f);
 	mCamera.mMovementSpeed = glm::vec3(3.0f); // 3 m/s => 10.8 km/h
@@ -123,9 +123,19 @@ edaf80::Assignment4::run()
 	}
 
 	//water uniforms
-	auto const set_waterUniforms = [&light_position , &elapsed_time_s, &camera_position](GLuint program) {
+	bool use_normal_mapping = true;
+	bool apply_base_color = true;
+	bool apply_fresnel = true;
+	bool apply_reflection = true;
+	bool apply_refraction = true;
+	auto const set_waterUniforms = [&use_normal_mapping, &apply_base_color, &apply_fresnel, &apply_reflection, &apply_refraction, &light_position , &elapsed_time_s, &camera_position](GLuint program) {
+		glUniform1i(glGetUniformLocation(program, "use_normal_mapping"), use_normal_mapping ? 1 : 0);
+		glUniform1i(glGetUniformLocation(program, "apply_base_color"), apply_base_color ? 1 : 0);
+		glUniform1i(glGetUniformLocation(program, "apply_fresnel"), apply_fresnel ? 1 : 0);
+		glUniform1i(glGetUniformLocation(program, "apply_reflection"), apply_reflection ? 1 : 0);
+		glUniform1i(glGetUniformLocation(program, "apply_refraction"), apply_refraction ? 1 : 0);
 		glUniform3fv(glGetUniformLocation(program, "light_position"), 1, glm::value_ptr(light_position));
-		glUniform1f(glGetUniformLocation(program, "t"), elapsed_time_s);
+		glUniform1f(glGetUniformLocation(program, "time"), elapsed_time_s);
 		glUniform3fv(glGetUniformLocation(program, "camera_position"), 1, glm::value_ptr(camera_position));
 	};
 
@@ -143,7 +153,6 @@ edaf80::Assignment4::run()
 
 
 	auto lastTime = std::chrono::high_resolution_clock::now();
-
 	bool pause_animation = true;
 	bool use_orbit_camera = false;
 	auto cull_mode = bonobo::cull_mode_t::disabled;
@@ -235,6 +244,11 @@ edaf80::Assignment4::run()
 		if (opened) {
 			ImGui::Checkbox("Pause animation", &pause_animation);
 			ImGui::Checkbox("Use orbit camera", &use_orbit_camera);
+			ImGui::Checkbox("Use normal mapping", &use_normal_mapping);
+			ImGui::Checkbox("Apply base color", &apply_base_color);
+			ImGui::Checkbox("Apply fresnel", &apply_fresnel);
+			ImGui::Checkbox("Apply reflection", &apply_reflection);
+			ImGui::Checkbox("Apply refraction", &apply_refraction);
 			ImGui::Separator();
 			auto const cull_mode_changed = bonobo::uiSelectCullMode("Cull mode", cull_mode);
 			if (cull_mode_changed) {
