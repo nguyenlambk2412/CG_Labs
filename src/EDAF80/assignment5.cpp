@@ -16,6 +16,8 @@
 #include <clocale>
 #include <stdexcept>
 
+#include <stdlib.h>
+
 
 
 edaf80::Assignment5::Assignment5(WindowManager& windowManager) :
@@ -43,9 +45,9 @@ void
 edaf80::Assignment5::run()
 {
 	// Set up the camera
-	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, -4.0f, 10.0f));
-	mCamera.mWorld.LookAt(glm::vec3(0.0f));
+	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, 0.5f, 1.3f));
 	mCamera.mMouseSensitivity = glm::vec2(0.003f);
+	mCamera.mWorld.LookAt(glm::vec3(0.0f, 0.0f, -20.0f));
 	mCamera.mMovementSpeed = glm::vec3(3.0f); // 3 m/s => 10.8 km/h
 	auto camera_position = mCamera.mWorld.GetTranslation();
 
@@ -108,7 +110,7 @@ edaf80::Assignment5::run()
 	GLuint AmbientOclussion_Ship			= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/AmbientOclussion_Ship.png"), false);
 	GLuint Emissive_Engine					= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Emissive_Engine.png"), false);
 	GLuint Emissive_Ship					= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Emissive_Ship.png"), false);
-	GLuint Mask_Engine = bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Mask_Translucent_Rejilla_Engine.png"), false);
+	GLuint Mask_Engine =					bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Mask_Translucent_Rejilla_Engine.png"), false);
 	GLuint Metallic_Engine					= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Metallic_Engine.png"), false);
 	GLuint Metallic_Ship					= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Metallic_Ship.png"), false);
 	GLuint Normal_Engine_PostProdc			= bonobo::loadTexture2D(config::resources_path("ObjectModel/spaceship/textures/Normal_Engine_PostProdc.png"), false);
@@ -180,25 +182,55 @@ edaf80::Assignment5::run()
 	spaceship.add_texture("maskEngTex", Mask_Engine, GL_TEXTURE_2D);
 
 	
-	//Asteroid
-	Node asteroid;
-	asteroid.set_geometry(asteroid_shape);
-	asteroid.set_program(&asteroid_shader, phong_set_uniforms);
-	asteroid.add_texture("diffTexture", asteroidDiffTex, GL_TEXTURE_2D);
-	asteroid.add_texture("specTexture", asteroidSpecTex, GL_TEXTURE_2D);
-	asteroid.add_texture("normTexture", asteroidNormTex, GL_TEXTURE_2D);
+	///Asteroid
+	//Asteroid location for the space ship
+	float asteroid_acceleration = 10.0f;
+	float asteroid_rotation = 0.0f;
+	
 
+	const unsigned int noOfAsteroids = 20;
+	std::array<glm::vec3, noOfAsteroids>  asteroid_locations;
+	std::array<glm::vec3, noOfAsteroids>  asteroid_rotateVecs;
+	std::array<float, noOfAsteroids>  asteroid_scales;
+	std::array<float, noOfAsteroids>  asteroid_accs;
+	std::array<float, noOfAsteroids>  asteroid_rotateSpeeds;
+	std::array<Node, noOfAsteroids> asteroids;
+	for (unsigned int i = 0; i < noOfAsteroids; i++)
+	{
+		auto& const asteroid = asteroids[i];
+		asteroid.set_geometry(asteroid_shape);
+		asteroid.set_program(&asteroid_shader, phong_set_uniforms);
+		asteroid.add_texture("diffTexture", asteroidDiffTex, GL_TEXTURE_2D);
+		asteroid.add_texture("specTexture", asteroidSpecTex, GL_TEXTURE_2D);
+		asteroid.add_texture("normTexture", asteroidNormTex, GL_TEXTURE_2D);
+
+		float posX = -3.0f + 6.0f*std::rand() / (RAND_MAX+1.0f);
+		float posZ = -20.0f + 40.0f * std::rand() / (RAND_MAX + 1.0f);
+		asteroid_locations[i] = glm::vec3(posX, 0.0f, posZ);
+
+		asteroid_scales[i] = 0.05f + 0.05*std::rand() / (RAND_MAX+1.0f);
+
+		asteroid_accs[i] = 30.0f + std::rand() / (RAND_MAX / 50.0f);
+
+		asteroid_rotateSpeeds[i] = 0.1*std::rand() / (RAND_MAX +0.5f);
+
+		float rotX = std::rand() / (RAND_MAX + 2.0f);
+		float rotY = std::rand() / (RAND_MAX + 2.0f);
+		float rotZ = std::rand() / (RAND_MAX + 2.0f);
+		asteroid_rotateVecs[i] = glm::vec3(rotX, rotY, rotZ);
+	}
 
 	///Lock location for the space ship
+	bool spaceshipUpdate = false;
+	float spaceshipLocation = 0.0f;
+	float spaceshipHorSpeed = 0.5;
+	float spaceshipVerSpeed = 0.0f;
+	float camLocation = 0.0f;
 	glm::mat4 spaceshipTransform = glm::mat4(1.0f);
-	spaceshipTransform = glm::rotate(spaceshipTransform,glm::radians(30.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-	spaceshipTransform = glm::translate(spaceshipTransform, glm::vec3(0.0f, -5.0f, 10.0f));
-	spaceshipTransform = glm::scale(spaceshipTransform, glm::vec3(0.1));
+	spaceshipTransform = glm::scale(spaceshipTransform, glm::vec3(0.05));
 
-	///Asteroid location for the space ship
-	glm::mat4 asteroidTransform = glm::mat4(1.0f);
-	asteroidTransform = glm::translate(asteroidTransform, glm::vec3(0.0f, 0.0f, -15.0f));
-	asteroidTransform = glm::scale(asteroidTransform, glm::vec3(0.3));
+
+
 	
 
 	glClearDepthf(1.0f);
@@ -213,6 +245,7 @@ edaf80::Assignment5::run()
 	bool show_basis = false;
 	float basis_thickness_scale = 1.0f;
 	float basis_length_scale = 1.0f;
+	bool pause_bool = true;
 
 	while (!glfwWindowShouldClose(window)) {
 		auto const nowTime = std::chrono::high_resolution_clock::now();
@@ -224,8 +257,7 @@ edaf80::Assignment5::run()
 
 		glfwPollEvents();
 		inputHandler.Advance();
-		mCamera.Update(deltaTimeUs, inputHandler);
-		mCamera.mWorld.LookAt(glm::vec3(0.0f));
+		//mCamera.Update(deltaTimeUs, inputHandler);
 
 		if (inputHandler.GetKeycodeState(GLFW_KEY_R) & JUST_PRESSED) {
 			shader_reload_failed = !program_manager.ReloadAllPrograms();
@@ -242,7 +274,33 @@ edaf80::Assignment5::run()
 		if (inputHandler.GetKeycodeState(GLFW_KEY_F11) & JUST_RELEASED)
 			mWindowManager.ToggleFullscreenStatusForWindow(window);
 
+		//Control the spaceship
+		if (inputHandler.GetKeycodeState(GLFW_KEY_A) & PRESSED) {
+			spaceshipUpdate = true;
+			spaceshipLocation = -spaceshipHorSpeed;
 
+		}
+
+		if (inputHandler.GetKeycodeState(GLFW_KEY_D) & PRESSED) {
+			spaceshipUpdate = true;
+			spaceshipLocation = spaceshipHorSpeed;
+		}
+
+		if (inputHandler.GetKeycodeState(GLFW_KEY_W) & PRESSED) {
+			spaceshipVerSpeed = 80.0f;
+		}
+
+		if (inputHandler.GetKeycodeState(GLFW_KEY_S) & PRESSED) {
+			spaceshipVerSpeed = -20.0f;
+		}
+
+		if (inputHandler.GetKeycodeState(GLFW_KEY_W) & JUST_RELEASED) {
+			spaceshipVerSpeed = 0.0f;
+		}
+
+		if (inputHandler.GetKeycodeState(GLFW_KEY_S) & JUST_RELEASED) {
+			spaceshipVerSpeed = 0.0f;
+		}
 		// Retrieve the actual framebuffer size: for HiDPI monitors,
 		// you might end up with a framebuffer larger than what you
 		// actually asked for. For example, if you ask for a 1920x1080
@@ -264,7 +322,9 @@ edaf80::Assignment5::run()
 
 		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
-
+		
+		
+		
 		if (!shader_reload_failed) {
 			//
 			// Todo: Render all your geometry here.
@@ -289,9 +349,35 @@ edaf80::Assignment5::run()
 				{
 					meshID = 2;
 				}
+				if (true == spaceshipUpdate)
+				{
+					spaceshipTransform = glm::translate(spaceshipTransform, glm::vec3(spaceshipLocation, 0.0f, 0.0f));
+					spaceshipUpdate = false;
+				}
 				spaceship.render(mCamera.GetWorldToClipMatrix(), spaceshipTransform);
+
+				for (unsigned int i = 0; i < noOfAsteroids; i++)
+				{
+					auto& const asteroid = asteroids[i];
+					glm::mat4 asteroidTransform;
+					if (false == pause_bool)
+					{
+						/// <summary>
+						/// Asteroid control
+						/// </summary>
+						float dt = std::chrono::duration<float>(deltaTimeUs).count();
+						asteroid_locations[i].z += (asteroid_accs[i] + asteroid_acceleration + spaceshipVerSpeed) * dt * dt;
+						asteroid_rotation += asteroid_rotateSpeeds[i] * dt;
+						if (20.0f <= asteroid_locations[i].z) asteroid_locations[i].z = -20.0f;
+						asteroidTransform = glm::translate(glm::mat4(1.0f), glm::vec3(asteroid_locations[i].x, 0.0f, asteroid_locations[i].z));
+						asteroidTransform = glm::rotate(asteroidTransform, asteroid_rotation, asteroid_rotateVecs[i]);
+						asteroidTransform = glm::scale(asteroidTransform, glm::vec3(asteroid_scales[i]));
+					}
+					asteroid.render(mCamera.GetWorldToClipMatrix(), asteroidTransform);
+
+				}
 			}
-			asteroid.render(mCamera.GetWorldToClipMatrix(), asteroidTransform);
+			
 		}
 
 
@@ -303,9 +389,9 @@ edaf80::Assignment5::run()
 		//
 		bool const opened = ImGui::Begin("Scene Controls", nullptr, ImGuiWindowFlags_None);
 		if (opened) {
-			ImGui::Checkbox("Show basis", &show_basis);
-			ImGui::SliderFloat("Basis thickness scale", &basis_thickness_scale, 0.0f, 100.0f);
-			ImGui::SliderFloat("Basis length scale", &basis_length_scale, 0.0f, 100.0f);
+			ImGui::Checkbox("Show basic", &show_basis);
+			ImGui::Checkbox("Pause", &pause_bool);
+			ImGui::SliderFloat("Moving Speed", &asteroid_acceleration, 10.0f, 100.0f);
 		}
 		ImGui::End();
 
