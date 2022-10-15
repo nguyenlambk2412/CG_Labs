@@ -40,7 +40,7 @@ void
 edaf80::Assignment4::run()
 {
 	// Set up the camera
-	mCamera.mWorld.SetTranslate(glm::vec3(2.0f, 1.0f, 8.0f));
+	mCamera.mWorld.SetTranslate(glm::vec3(-40.0f, 14.0f, 8.0f));
 	mCamera.mWorld.LookAt(glm::vec3(0.0f));
 	mCamera.mMouseSensitivity = glm::vec2(0.003f);
 	mCamera.mMovementSpeed = glm::vec3(3.0f); // 3 m/s => 10.8 km/h
@@ -98,7 +98,7 @@ edaf80::Assignment4::run()
 	// Todo: Load your geometry
 	//
 	// create the skybox shape
-	auto skybox_shape = parametric_shapes::createSphere(20.0f, 100u, 100u);
+	auto skybox_shape = parametric_shapes::createSphere(100.0f, 100u, 100u);
 	if (skybox_shape.vao == 0u) {
 		LogError("Failed to retrieve the mesh for the skybox");
 		return;
@@ -116,7 +116,8 @@ edaf80::Assignment4::run()
 	skybox.add_texture("skyboxTexture", skyboxTexture, GL_TEXTURE_CUBE_MAP);
 
 	//create the water shape
-	auto demo_shape = parametric_shapes::createQuad(100.0f, 100.0f, 1000u, 1000u);
+	//auto demo_shape = parametric_shapes::createQuad(100.0f, 100.0f, 1000u, 1000u);
+	auto demo_shape = parametric_shapes::createSphere(10.0f, 100u, 100u);
 	if (demo_shape.vao == 0u) {
 		LogError("Failed to retrieve the mesh for the demo sphere");
 		return;

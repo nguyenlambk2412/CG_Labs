@@ -60,7 +60,7 @@ void main()
 							fs_in.surNormal);
 
 		//with normal mapping
-		normalVec = normalize(vec3(normal_model_to_world*vec4(surTBN * waveTBN * normal_bumpy, 0.0f)));
+		normalVec = normalize(vec3(normal_model_to_world*vec4(waveTBN * normal_bumpy, 0.0f)));
 
 	}
 	else
@@ -80,7 +80,7 @@ void main()
 	vec3 reflection = reflect(-V,normalVec);
 
 	// refraction
-	vec3 refaction = refract(-V,normalVec,1.33);
+	vec3 refaction = refract(-V,normalVec,1/1.33);
 
 	//fresnel terms
 	float R0 = 0.02037;
