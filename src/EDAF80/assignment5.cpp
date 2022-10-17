@@ -52,14 +52,13 @@ edaf80::Assignment5::run()
 	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, 0.5f, 1.3f));
 	mCamera.mMouseSensitivity = glm::vec2(0.003f);
 	mCamera.mWorld.LookAt(glm::vec3(0.0f, 0.0f, -20.0f));
-	mCamera.mMovementSpeed = glm::vec3(3.0f); // 3 m/s => 10.8 km/h
 	auto camera_position = mCamera.mWorld.GetTranslation();
 
 	// Create the shader programs
 	ShaderProgramManager program_manager;
 	//diffuse
 	GLuint spaceshipSphere_shader = 0u;
-	program_manager.CreateAndRegisterProgram("spaceshipSphere",
+	program_manager.CreateAndRegisterProgram("testSphere",
 		{ { ShaderType::vertex, "EDAF80/A5_spaceshipSphere.vert" },
 		  { ShaderType::fragment, "EDAF80/A5_spaceshipSphere.frag" } },
 		spaceshipSphere_shader);
@@ -148,19 +147,13 @@ edaf80::Assignment5::run()
 	// Todo: Load your geometry
 	//
 	// create the skybox shape
-	auto skybox_shape = parametric_shapes::createSphere(20.0f, 100u, 100u);
+	float skyboxRadius = 20.0f;
+	auto skybox_shape = parametric_shapes::createSphere(skyboxRadius, 100u, 100u);
 	if (skybox_shape.vao == 0u) {
 		LogError("Failed to retrieve the mesh for the skybox");
 		return;
 	}
-
-	float spaceshipRadius = 3.0f;
-	// create the spaceship sphere shape
-	auto spaceship_Sphere = parametric_shapes::createSphere(spaceshipRadius, 10u, 10u);
-	if (spaceship_Sphere.vao == 0u) {
-		LogError("Failed to retrieve the mesh for the spaceship_Sphere");
-		return;
-	}
+	
 
 	// create the spaceship
 	std::vector<bonobo::mesh_data> const spaceShipObj = bonobo::loadObjects(config::resources_path("ObjectModel/spaceship/source/Ship.obj"));
@@ -203,9 +196,8 @@ edaf80::Assignment5::run()
 	spaceship.add_texture("emissBodyTex", Emissive_Ship, GL_TEXTURE_2D);
 	spaceship.add_texture("maskEngTex", Mask_Engine, GL_TEXTURE_2D);
 
-	Node spaceshipSphere;
-	spaceshipSphere.set_geometry(spaceship_Sphere);
-	spaceshipSphere.set_program(&spaceshipSphere_shader);
+
+	
 
 	///Asteroid
 	//Asteroid location for the space ship
@@ -220,6 +212,12 @@ edaf80::Assignment5::run()
 	std::array<float, noOfAsteroids>  asteroid_accs;
 	std::array<float, noOfAsteroids>  asteroid_rotateSpeeds;
 	std::array<Node, noOfAsteroids> asteroids;
+
+	float asteroidRadius = 1.0f;
+	float spaceshipRadius = 3.0f;
+	// create the spaceship sphere shape
+	std::array<bonobo::mesh_data, noOfAsteroids>  test_Sphere;
+	std::array<Node, noOfAsteroids> testSphere;
 	for (unsigned int i = 0; i < noOfAsteroids; i++)
 	{
 		auto& const asteroid = asteroids[i];
@@ -230,7 +228,7 @@ edaf80::Assignment5::run()
 		asteroid.add_texture("normTexture", asteroidNormTex, GL_TEXTURE_2D);
 
 		float posX = -3.0f + 6.0f*std::rand() / (RAND_MAX+1.0f);
-		float posZ = -20.0f + 40.0f * std::rand() / (RAND_MAX + 1.0f);
+		float posZ = -skyboxRadius + 2* skyboxRadius * std::rand() / (RAND_MAX + 1.0f);
 		asteroid_locations[i] = glm::vec3(posX, 0.0f, posZ);
 
 		asteroid_scales[i] = 0.05f + 0.05*std::rand() / (RAND_MAX+1.0f);
@@ -243,16 +241,21 @@ edaf80::Assignment5::run()
 		float rotY = std::rand() / (RAND_MAX + 2.0f);
 		float rotZ = std::rand() / (RAND_MAX + 2.0f);
 		asteroid_rotateVecs[i] = glm::vec3(rotX, rotY, rotZ);
+
+		test_Sphere[i] = parametric_shapes::createSphere(asteroidRadius, 5u, 5u);
+		testSphere[i].set_geometry(test_Sphere[i]);
+		testSphere[i].set_program(&spaceshipSphere_shader);
 	}
 
 	///Lock location for the space ship
 	bool spaceshipUpdate = false;
 	float spaceshipLocation = 0.0f;
-	float spaceshipHorSpeed = 0.5;
+	float spaceshipHorSpeed = 0.02;
 	float spaceshipVerSpeed = 0.0f;
 	float camLocation = 0.0f;
-	glm::mat4 spaceshipTransform = glm::mat4(1.0f);
-	spaceshipTransform = glm::scale(spaceshipTransform, glm::vec3(0.05));
+	spaceship.get_transform().SetScale(glm::vec3(0.05));
+	/*glm::mat4 spaceshipTransform = glm::mat4(1.0f);
+	spaceshipTransform = glm::scale(spaceshipTransform, );*/
 
 
 
@@ -273,7 +276,8 @@ edaf80::Assignment5::run()
 	bool pause_bool = true;
 
 	GameState gameState = GameState::GAME_START;
-
+	glm::vec3 asteroidPos;
+	glm::vec3 spaceshipPos;
 	while (!glfwWindowShouldClose(window)) {
 		auto const nowTime = std::chrono::high_resolution_clock::now();
 		auto const deltaTimeUs = std::chrono::duration_cast<std::chrono::microseconds>(nowTime - lastTime);
@@ -323,12 +327,14 @@ edaf80::Assignment5::run()
 			//Control the spaceship
 			if (inputHandler.GetKeycodeState(GLFW_KEY_A) & PRESSED) {
 				spaceshipUpdate = true;
-				spaceshipLocation = -spaceshipHorSpeed;
+				spaceshipLocation -= spaceshipHorSpeed;
+				if (spaceshipLocation <= -1) spaceshipLocation = -1;
 			}
 
 			if (inputHandler.GetKeycodeState(GLFW_KEY_D) & PRESSED) {
 				spaceshipUpdate = true;
-				spaceshipLocation = spaceshipHorSpeed;
+				spaceshipLocation += spaceshipHorSpeed;
+				if (spaceshipLocation >= 1) spaceshipLocation = 1;
 			}
 
 			if (inputHandler.GetKeycodeState(GLFW_KEY_W) & PRESSED) {
@@ -373,18 +379,19 @@ edaf80::Assignment5::run()
 					}
 					if (true == spaceshipUpdate)
 					{
-						spaceshipTransform = glm::translate(spaceshipTransform, glm::vec3(spaceshipLocation, 0.0f, 0.0f));
+						spaceship.get_transform().SetTranslate(glm::vec3(spaceshipLocation, 0.0f, 0.0f));
 						spaceshipUpdate = false;
 					}
-					spaceship.render(mCamera.GetWorldToClipMatrix(), spaceshipTransform);
+					spaceship.render(mCamera.GetWorldToClipMatrix(), glm::mat4(1.0f));
+					spaceshipPos = spaceship.get_transform().GetTranslation();
+					
 				}
-				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-				spaceshipSphere.render(mCamera.GetWorldToClipMatrix(), spaceshipTransform);
-				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+				
 
 				for (unsigned int i = 0; i < noOfAsteroids; i++)
 				{
 					auto& const asteroid = asteroids[i];
+					auto& const test = testSphere[i];
 					glm::mat4 asteroidTransform;
 					if (false == pause_bool)
 					{
@@ -393,13 +400,25 @@ edaf80::Assignment5::run()
 						/// </summary>
 						float dt = std::chrono::duration<float>(deltaTimeUs).count();
 						asteroid_locations[i].z += (asteroid_accs[i] + asteroid_acceleration + spaceshipVerSpeed) * dt * dt;
+						if (skyboxRadius <= asteroid_locations[i].z) asteroid_locations[i].z = -skyboxRadius;
 						asteroid_rotation += asteroid_rotateSpeeds[i] * dt;
-						if (20.0f <= asteroid_locations[i].z) asteroid_locations[i].z = -20.0f;
-						asteroidTransform = glm::translate(glm::mat4(1.0f), glm::vec3(asteroid_locations[i].x, 0.0f, asteroid_locations[i].z));
-						asteroidTransform = glm::rotate(asteroidTransform, asteroid_rotation, asteroid_rotateVecs[i]);
-						asteroidTransform = glm::scale(asteroidTransform, glm::vec3(asteroid_scales[i]));
+						asteroid.get_transform().ResetTransform();
+						asteroid.get_transform().SetTranslate(glm::vec3(asteroid_locations[i].x, 0.0f, asteroid_locations[i].z));
+						asteroid.get_transform().SetRotate(asteroid_rotation, asteroid_rotateVecs[i]);
+						asteroid.get_transform().SetScale(glm::vec3(asteroid_scales[i]));
+
+						test.get_transform().ResetTransform();
+						test.get_transform().SetTranslate(glm::vec3(asteroid_locations[i].x, 0.0f, asteroid_locations[i].z));
+						test.get_transform().SetScale(glm::vec3(asteroid_scales[i]));
+									
 					}
-					asteroid.render(mCamera.GetWorldToClipMatrix(), asteroidTransform);
+					asteroid.render(mCamera.GetWorldToClipMatrix(), glm::mat4(1.0f));
+					glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+					test.render(mCamera.GetWorldToClipMatrix(), glm::mat4(1.0f));
+					// Calculate the location of the asteroid
+					// Calculate the distance between the asteroid and the spaceship
+					// Check the distance with the sum of the two object radiuses and decide if there s a collision
+					asteroidPos = asteroid.get_transform().GetTranslation();
 
 				}
 
