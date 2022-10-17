@@ -147,7 +147,7 @@ edaf80::Assignment5::run()
 	// Todo: Load your geometry
 	//
 	// create the skybox shape
-	float skyboxRadius = 20.0f;
+	float skyboxRadius = 15.0f;
 	auto skybox_shape = parametric_shapes::createSphere(skyboxRadius, 100u, 100u);
 	if (skybox_shape.vao == 0u) {
 		LogError("Failed to retrieve the mesh for the skybox");
@@ -191,7 +191,6 @@ edaf80::Assignment5::run()
 	spaceship.add_texture("metalicBodyTex", Metallic_Ship, GL_TEXTURE_2D);
 	spaceship.add_texture("normalBodyTex", Normal_Ship_PostProdc, GL_TEXTURE_2D);
 	spaceship.add_texture("roughnesssBodyTex", Roughness_Ship, GL_TEXTURE_2D);
-
 	spaceship.add_texture("emissEngTex", Emissive_Engine, GL_TEXTURE_2D);
 	spaceship.add_texture("emissBodyTex", Emissive_Ship, GL_TEXTURE_2D);
 	spaceship.add_texture("maskEngTex", Mask_Engine, GL_TEXTURE_2D);
@@ -205,7 +204,7 @@ edaf80::Assignment5::run()
 	float asteroid_rotation = 0.0f;
 	
 
-	const unsigned int noOfAsteroids = 20;
+	const unsigned int noOfAsteroids = 30;
 	std::array<glm::vec3, noOfAsteroids>  asteroid_locations;
 	std::array<glm::vec3, noOfAsteroids>  asteroid_rotateVecs;
 	std::array<float, noOfAsteroids>  asteroid_scales;
@@ -214,7 +213,7 @@ edaf80::Assignment5::run()
 	std::array<Node, noOfAsteroids> asteroids;
 
 	float asteroidRadius = 1.0f;
-	float spaceshipRadius = 3.0f;
+	float spaceshipRadius = 0.05f;
 	// create the spaceship sphere shape
 	std::array<bonobo::mesh_data, noOfAsteroids>  test_Sphere;
 	std::array<Node, noOfAsteroids> testSphere;
@@ -228,7 +227,7 @@ edaf80::Assignment5::run()
 		asteroid.add_texture("normTexture", asteroidNormTex, GL_TEXTURE_2D);
 
 		float posX = -3.0f + 6.0f*std::rand() / (RAND_MAX+1.0f);
-		float posZ = -skyboxRadius + 2* skyboxRadius * std::rand() / (RAND_MAX + 1.0f);
+		float posZ = -skyboxRadius + 2 * skyboxRadius * std::rand() / (RAND_MAX + 1.0f);
 		asteroid_locations[i] = glm::vec3(posX, 0.0f, posZ);
 
 		asteroid_scales[i] = 0.05f + 0.05*std::rand() / (RAND_MAX+1.0f);
@@ -250,6 +249,7 @@ edaf80::Assignment5::run()
 	///Lock location for the space ship
 	bool spaceshipUpdate = false;
 	float spaceshipLocation = 0.0f;
+	float spaceshipRotate = 0.0f;
 	float spaceshipHorSpeed = 0.02;
 	float spaceshipVerSpeed = 0.0f;
 	float camLocation = 0.0f;
@@ -267,14 +267,14 @@ edaf80::Assignment5::run()
 
 	auto lastTime = std::chrono::high_resolution_clock::now();
 
-	bool show_logs = true;
+	bool show_logs = false;
 	bool show_gui = true;
 	bool shader_reload_failed = false;
 	bool show_basis = false;
-	float basis_thickness_scale = 1.0f;
-	float basis_length_scale = 1.0f;
-	bool pause_bool = true;
-
+	float basis_thickness_scale = 0.1f;
+	float basis_length_scale = 0.1f;
+	bool pause_bool = false;
+	float safeTime;
 	GameState gameState = GameState::GAME_START;
 	glm::vec3 asteroidPos;
 	glm::vec3 spaceshipPos;
@@ -319,7 +319,10 @@ edaf80::Assignment5::run()
 			ImGui::Separator();
 			ImGui::Text(" ");
 			if (ImGui::Button("START", ImVec2(ImGui::GetWindowSize().x * 0.98f, 0.0f)))
+			{
 				gameState = GameState::GAME_RUN;
+				safeTime = 2.0f;
+			}
 			ImGui::End();
 			break;
 		case GameState::GAME_RUN:
@@ -329,28 +332,34 @@ edaf80::Assignment5::run()
 				spaceshipUpdate = true;
 				spaceshipLocation -= spaceshipHorSpeed;
 				if (spaceshipLocation <= -1) spaceshipLocation = -1;
+				spaceshipRotate += 1.0f;
+				if (spaceshipRotate > 30.0f)spaceshipRotate = 30.0f;
 			}
 
 			if (inputHandler.GetKeycodeState(GLFW_KEY_D) & PRESSED) {
 				spaceshipUpdate = true;
 				spaceshipLocation += spaceshipHorSpeed;
 				if (spaceshipLocation >= 1) spaceshipLocation = 1;
+				spaceshipRotate -= 1.0f;
+				if (spaceshipRotate < -30.0f)spaceshipRotate = -30.0f;
+
 			}
 
-			if (inputHandler.GetKeycodeState(GLFW_KEY_W) & PRESSED) {
-				spaceshipVerSpeed = 80.0f;
+			if (inputHandler.GetKeycodeState(GLFW_KEY_W) & JUST_PRESSED) {
+				spaceshipVerSpeed += 80.0f;
+				
 			}
 
-			if (inputHandler.GetKeycodeState(GLFW_KEY_S) & PRESSED) {
-				spaceshipVerSpeed = -20.0f;
+			if (inputHandler.GetKeycodeState(GLFW_KEY_S) & JUST_PRESSED) {
+				spaceshipVerSpeed -= 20.0f;
 			}
 
 			if (inputHandler.GetKeycodeState(GLFW_KEY_W) & JUST_RELEASED) {
-				spaceshipVerSpeed = 0.0f;
+				spaceshipVerSpeed -= 80.0f;
 			}
 
 			if (inputHandler.GetKeycodeState(GLFW_KEY_S) & JUST_RELEASED) {
-				spaceshipVerSpeed = 0.0f;
+				spaceshipVerSpeed += 20.0f;
 			}
 
 			if (!shader_reload_failed) {
@@ -380,19 +389,17 @@ edaf80::Assignment5::run()
 					if (true == spaceshipUpdate)
 					{
 						spaceship.get_transform().SetTranslate(glm::vec3(spaceshipLocation, 0.0f, 0.0f));
+						spaceship.get_transform().SetRotate(glm::radians(spaceshipRotate), glm::vec3(0.0, 0.0f, 1.0f));
 						spaceshipUpdate = false;
-					}
-					spaceship.render(mCamera.GetWorldToClipMatrix(), glm::mat4(1.0f));
-					spaceshipPos = spaceship.get_transform().GetTranslation();
-					
+					}				
 				}
+				spaceship.render(mCamera.GetWorldToClipMatrix(), glm::mat4(1.0f));
+				spaceshipPos = spaceship.get_transform().GetTranslation();
 				
 
 				for (unsigned int i = 0; i < noOfAsteroids; i++)
 				{
 					auto& const asteroid = asteroids[i];
-					auto& const test = testSphere[i];
-					glm::mat4 asteroidTransform;
 					if (false == pause_bool)
 					{
 						/// <summary>
@@ -405,26 +412,41 @@ edaf80::Assignment5::run()
 						asteroid.get_transform().ResetTransform();
 						asteroid.get_transform().SetTranslate(glm::vec3(asteroid_locations[i].x, 0.0f, asteroid_locations[i].z));
 						asteroid.get_transform().SetRotate(asteroid_rotation, asteroid_rotateVecs[i]);
-						asteroid.get_transform().SetScale(glm::vec3(asteroid_scales[i]));
-
-						test.get_transform().ResetTransform();
-						test.get_transform().SetTranslate(glm::vec3(asteroid_locations[i].x, 0.0f, asteroid_locations[i].z));
-						test.get_transform().SetScale(glm::vec3(asteroid_scales[i]));
-									
+						asteroid.get_transform().SetScale(glm::vec3(asteroid_scales[i]));															
 					}
 					asteroid.render(mCamera.GetWorldToClipMatrix(), glm::mat4(1.0f));
-					glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-					test.render(mCamera.GetWorldToClipMatrix(), glm::mat4(1.0f));
-					// Calculate the location of the asteroid
-					// Calculate the distance between the asteroid and the spaceship
-					// Check the distance with the sum of the two object radiuses and decide if there s a collision
-					asteroidPos = asteroid.get_transform().GetTranslation();
 
+					asteroidPos = asteroid.get_transform().GetTranslation();
+					glm::vec3 distance = asteroidPos - spaceshipPos;
+					float distanceFloat = sqrt(pow(distance.x, 2) + pow(distance.y, 2) + pow(distance.z, 2));
+					if (safeTime > 0) safeTime -= 0.01;
+					else
+					{
+						if (distanceFloat < (spaceshipRadius + asteroid_scales[i] * asteroidRadius))
+						{
+							gameState = GameState::GAME_FINISH;
+						}
+					}
+					
 				}
 
 			}
 			break;
 		case GameState::GAME_FINISH:
+			ImGui::SetNextWindowPos(ImVec2(config::resolution_x * 0.5f, config::resolution_y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+			ImGui::SetNextWindowSize(ImVec2(config::resolution_x * 0.23f, config::resolution_y * 0.3f), ImGuiCond_Always);
+
+			ImGui::Begin("GAME OVER", nullptr, ImGuiWindowFlags_None);
+			ImGui::Text("Click RESTART to try again!");;
+			ImGui::Separator();
+			ImGui::Text(" ");
+			if (ImGui::Button("RESTART", ImVec2(ImGui::GetWindowSize().x * 0.98f, 0.0f)))
+			{
+				gameState = GameState::GAME_RUN;
+				safeTime = 3.0f;
+			}
+				
+			ImGui::End();
 			break;
 		}
 
@@ -440,7 +462,7 @@ edaf80::Assignment5::run()
 		if (opened) {
 			ImGui::Checkbox("Show basic", &show_basis);
 			ImGui::Checkbox("Pause", &pause_bool);
-			ImGui::SliderFloat("Moving Speed", &asteroid_acceleration, 10.0f, 100.0f);
+			ImGui::SliderFloat("Speed", &spaceshipVerSpeed, 0.0f, 400.0f);
 		}
 		ImGui::End();
 
