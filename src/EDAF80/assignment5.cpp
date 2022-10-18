@@ -307,14 +307,12 @@ edaf80::Assignment5::run()
 			ImGui::Begin("LOST IN THE UNIVERSE", nullptr, ImGuiWindowFlags_None);
 			ImGui::Text(" ");
 			ImGui::Text("		Try to go as far as you can.	   ");
-			ImGui::Text("Manover to avoid colision with the asteroids");
+			ImGui::Text("Manoeuver to avoid colision with the asteroids");
 			ImGui::Text("		    Shoot to get scores				");
 			ImGui::Text(" ");
 			ImGui::Separator();
 			ImGui::Text("CONTROLS: ");
 			ImGui::Text("	- MANOEUVER:     	W,S,A and D keys");
-			ImGui::Text("	- LOOK AROUND:  	Mouse");
-			ImGui::Text("	- SHOOT: 			Left mouse button");
 			ImGui::Text(" ");
 			ImGui::Separator();
 			ImGui::Text(" ");
