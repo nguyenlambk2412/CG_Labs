@@ -39,4 +39,12 @@ void main()
 
 	// Worldspace normal
 	geometry_normal.xyz = vec3(0.0);
+	if (has_normals_texture)
+	{
+		mat3 tbn = mat3(fs_in.tangent, fs_in.binormal, fs_in.normal);
+		vec3 normalMap = vec3((texture(normals_texture, fs_in.texcoord)*2 - vec4(1,1,1,1)));
+		geometry_normal.xyz = (mat3(normal_model_to_world)*tbn*normalMap)*0.5+0.5;
+	}
+	else
+		geometry_normal.xyz = (mat3(normal_model_to_world)*fs_in.normal)*0.5+0.5;
 }

@@ -39,7 +39,23 @@ layout (location = 1) out vec4 light_specular_contribution;
 void main()
 {
 	vec2 shadowmap_texel_size = 1.0f / textureSize(shadow_texture, 0);
+	//construc texture coordinate
+	vec2 texCoord = vec2(gl_FragCoord.x*inverse_screen_resolution.x, gl_FragCoord.y*inverse_screen_resolution.y);
+	//sample the normal vector
+	vec3 normalVec = normalize(vec3(texture(normal_texture, texCoord)*2-1));
+	//retrieve fragment position
+	vec4 temp = texture(depth_texture, texCoord);
+	temp = camera.view_projection_inverse*temp;
+	vec3 fragPos = temp.xyz/temp.w;
 
-	light_diffuse_contribution  = vec4(0.0, 0.0, 0.0, 1.0);
-	light_specular_contribution = vec4(0.0, 0.0, 0.0, 1.0);
+	vec3 lightVec = normalize(light_position - fragPos);
+	vec3 viewVec = normalize(camera_position - fragPos);
+	float diffuse = max(0,dot(lightVec,normalVec));
+
+	vec3 reflectVec = reflect(-lightVec, normalVec);
+	float specular = pow(max(0,dot(reflectVec,normalVec)),50);	//hard code shininess value
+	
+
+	light_diffuse_contribution  = diffuse*vec4(0.5, 0.0, 0.1, 1.0);
+	light_specular_contribution = specular*vec4(0.9, 0.9, 0.9, 1.0);
 }
