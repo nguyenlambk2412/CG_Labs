@@ -32,7 +32,7 @@ namespace constant
 
 	constexpr size_t lights_nb           = 4;
 	constexpr float  light_intensity     = 72.0f * (scale_lengths * scale_lengths);
-	constexpr float  light_angle_falloff = glm::radians(37.0f);
+	constexpr float  light_angle_falloff = glm::radians(45.0f);
 }
 
 namespace
@@ -469,6 +469,7 @@ edan35::Assignment2::run()
 			
 
 			// XXX: Is any other clearing needed?
+			//clear both color and depth buffer for geometry rendering
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 			glClearDepthf(1.0f);
 			glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
@@ -538,7 +539,9 @@ edan35::Assignment2::run()
 			glViewport(0, 0, framebuffer_width, framebuffer_height);
 			
 			// XXX: Is any clearing needed?
-			
+			//clear color buffer once for all iteration as we gonna render all light effects into 1 texture
+			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+			glClear(GL_COLOR_BUFFER_BIT);
 			for (size_t i = 0; i < static_cast<size_t>(lights_nb); ++i) {
 				auto const& lightTransform = lightTransforms[i];
 				auto const light_view_matrix = lightOffsetTransform.GetMatrixInverse() * lightTransform.GetMatrixInverse();
@@ -554,9 +557,9 @@ edan35::Assignment2::run()
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbos[toU(FBO::ShadowMap)]);
 				glViewport(0, 0, constant::shadowmap_res_x, constant::shadowmap_res_y);
 				// XXX: Is any clearing needed?
-				glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+				// clear depth here for shadow calculating from each light.
 				glClearDepthf(1.0f);
-				glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);	//without this the shadownmap will be black
+				glClear(GL_DEPTH_BUFFER_BIT);
 				glUseProgram(fill_shadowmap_shader);
 				glUniform1i(fill_shadowmap_shader_locations.light_index, static_cast<int>(i));
 				glUniform1i(fill_shadowmap_shader_locations.opacity_texture, 0);
@@ -607,9 +610,7 @@ edan35::Assignment2::run()
 				glUseProgram(accumulate_lights_shader);
 				glViewport(0, 0, framebuffer_width, framebuffer_height);
 				// XXX: Is any clearing needed?
-				glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-				glClearDepthf(1.0f);
-				glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+				//no clearning here as we want all lights effects to be in the same texture
 				glUniform1i(accumulate_light_shader_locations.light_index, static_cast<int>(i));
 				glUniformMatrix4fv(accumulate_light_shader_locations.vertex_model_to_world, 1, GL_FALSE, glm::value_ptr(light_world_matrix));
 				glUniform3fv(accumulate_light_shader_locations.camera_position, 1, glm::value_ptr(mCamera.mWorld.GetTranslation()));
@@ -666,6 +667,7 @@ edan35::Assignment2::run()
 			glUseProgram(resolve_deferred_shader);
 			glViewport(0, 0, framebuffer_width, framebuffer_height);
 			// XXX: Is any clearing needed?
+			//clear both color and depth buffer for full screen rendering
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 			glClearDepthf(1.0f);
 			glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
