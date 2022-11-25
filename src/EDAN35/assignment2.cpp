@@ -30,7 +30,7 @@ namespace constant
 
 	constexpr float  scale_lengths       = 100.0f; // The scene is expressed in centimetres rather than metres, hence the x100.
 
-	constexpr size_t lights_nb           = 1;
+	constexpr size_t lights_nb           = 4;
 	constexpr float  light_intensity     = 72.0f * (scale_lengths * scale_lengths);
 	constexpr float  light_angle_falloff = glm::radians(37.0f);
 }
@@ -554,9 +554,9 @@ edan35::Assignment2::run()
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbos[toU(FBO::ShadowMap)]);
 				glViewport(0, 0, constant::shadowmap_res_x, constant::shadowmap_res_y);
 				// XXX: Is any clearing needed?
-				/*glClearColor(0.0f, 0.0f, 0.0f, 1.0f);*/
+				glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 				glClearDepthf(1.0f);
-				glClear(GL_DEPTH_BUFFER_BIT);
+				glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);	//without this the shadownmap will be black
 				glUseProgram(fill_shadowmap_shader);
 				glUniform1i(fill_shadowmap_shader_locations.light_index, static_cast<int>(i));
 				glUniform1i(fill_shadowmap_shader_locations.opacity_texture, 0);
@@ -666,7 +666,9 @@ edan35::Assignment2::run()
 			glUseProgram(resolve_deferred_shader);
 			glViewport(0, 0, framebuffer_width, framebuffer_height);
 			// XXX: Is any clearing needed?
-
+			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+			glClearDepthf(1.0f);
+			glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 			bind_texture_with_sampler(GL_TEXTURE_2D, 0, resolve_deferred_shader, "diffuse_texture", textures[toU(Texture::GBufferDiffuse)], samplers[toU(Sampler::Nearest)]);
 			bind_texture_with_sampler(GL_TEXTURE_2D, 1, resolve_deferred_shader, "specular_texture", textures[toU(Texture::GBufferSpecular)], samplers[toU(Sampler::Nearest)]);
 			bind_texture_with_sampler(GL_TEXTURE_2D, 2, resolve_deferred_shader, "light_d_texture", textures[toU(Texture::LightDiffuseContribution)], samplers[toU(Sampler::Nearest)]);

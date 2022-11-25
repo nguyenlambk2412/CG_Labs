@@ -40,7 +40,7 @@ void main()
 {
 	vec2 shadowmap_texel_size = 1.0f / textureSize(shadow_texture, 0);
 
-	//construct texture coordinate
+	//construct coordinates
 	vec2 texCoord = gl_FragCoord.xy*inverse_screen_resolution;
 	vec4 testColor = texture(depth_texture, texCoord);
 	float depth = texture(depth_texture, texCoord).r; 
@@ -50,26 +50,48 @@ void main()
 	temp = temp/temp.w;
 	vec3 fragPos = temp.xyz;
 
-	//sample the normal vector
-	vec3 normalVec = normalize(vec3(texture(normal_texture, texCoord)*2-1));
 	//construct neccessary vectors
+	vec3 normalVec = normalize(vec3(texture(normal_texture, texCoord)*2-1));
 	vec3 lightVec = normalize(light_position - fragPos);
 	vec3 viewVec = normalize(camera_position - fragPos);
 	vec3 reflectVec = reflect(-lightVec, normalVec);
-	//calculate diffuse and specular parameters
+
+	///Phong: calculate diffuse and specular parameters
 	float diffuse = max(0,dot(lightVec,normalVec));
 	float specular = pow(max(0,dot(reflectVec,viewVec)),30);	//hard code shininess value
 
 	///Distance Falloff calculation 
 	float ObjectLightDistance = length(light_position - fragPos);
 	float distanceFalloff = 1/pow(ObjectLightDistance,2);
-
-	///Angular Falloff calculation
+	//Angular Falloff calculation
 	float angularFalloff = (dot(normalize(light_direction),-lightVec) - cos(light_angle_falloff))/(1-cos(light_angle_falloff));
-	///Final light intensity:
+	//Final light intensity:
 	float finalLightIntensity = light_intensity*distanceFalloff*angularFalloff;
 
+	///Shadow handling
+	//project the fragment into the shadow camera space:
+	vec4 projectedPos = lights[light_index].view_projection*vec4(fragPos,1.0f);	// projected position in range [0 1]
+	projectedPos = projectedPos/projectedPos.w;	//the order of this and the line below need to be like this
+	projectedPos = projectedPos*0.5+0.5;		// dont change the order of this and the one above
+	float currentDepth = projectedPos.z;
+	float shadowParam = 0;
+	float bias = 0.0001;
+	int sampleSize = 2;
+	//Percentage Closer Filtering
+	for(int i = -sampleSize; i <= sampleSize; i++)
+	{
+		for(int j =-sampleSize; j <= sampleSize; j++)
+		{
+			vec2 sampleCoord = projectedPos.xy + vec2(i,j)*inverse_screen_resolution;
+			float shadowDepth = texture(shadow_texture, sampleCoord.xy).r + bias;
+			if(currentDepth < shadowDepth)
+				shadowParam += 1;
+		}
+	}
+	shadowParam = shadowParam / pow((sampleSize*2+1),2);	//get the average.
+
 	//Combination of all  lighting effects
-	light_diffuse_contribution  = finalLightIntensity*diffuse*vec4(light_color,1.0f);
-	light_specular_contribution = finalLightIntensity*specular*vec4(0.9, 0.9, 0.9, 1.0);
+	light_diffuse_contribution  = shadowParam*finalLightIntensity*diffuse*vec4(light_color,1.0f);
+	light_specular_contribution = shadowParam*finalLightIntensity*specular*vec4(0.9, 0.9, 0.9, 1.0);
+
 }
