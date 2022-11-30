@@ -159,6 +159,7 @@ namespace
 	void fillAccumulateLightsShaderLocations(GLuint accumulate_lights_shader, AccumulateLightsShaderLocations& locations);
 
 	bonobo::mesh_data loadCone();
+	bonobo::mesh_data loadFire();
 } // namespace
 
 edan35::Assignment2::Assignment2(WindowManager& windowManager) :
@@ -223,10 +224,14 @@ edan35::Assignment2::run()
 	Node cone;
 	cone.set_geometry(cone_geometry);
 
+	Node fire;
+	auto const fire_geometry = loadFire();
+	fire.set_geometry(fire_geometry);
+
 	//
 	// Setup the camera
 	//
-	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, 1.0f, 1.8f) * constant::scale_lengths);
+	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, 0.0f, 1.8f) * constant::scale_lengths);
 	mCamera.mMouseSensitivity = glm::vec2(0.003f);
 	mCamera.mMovementSpeed = glm::vec3(3.0f) * constant::scale_lengths; // 3 m/s => 10.8 km/h.
 
@@ -313,6 +318,16 @@ edan35::Assignment2::run()
 		return;
 	}
 
+	GLuint render_fire_shader = 0u;
+	program_manager.CreateAndRegisterProgram("Render fire",
+		{ { ShaderType::vertex, "Particle/particle.vs" },
+		  { ShaderType::fragment, "Particle/particle.frag" } },
+		render_fire_shader);
+	if (render_fire_shader == 0u) {
+		LogError("Failed to load light fire rendering shader");
+		return;
+	}
+
 	auto const set_uniforms = [](GLuint /*program*/){};
 
 	ViewProjTransforms camera_view_proj_transforms;
@@ -368,15 +383,16 @@ edan35::Assignment2::run()
 	auto seconds_nb = 0.0f;
 	std::array<GLuint64, toU(ElapsedTimeQuery::Count)> pass_elapsed_times;
 	auto lastTime = std::chrono::high_resolution_clock::now();
-	bool show_textures = true;
+	bool show_textures = false;
 	bool show_cone_wireframe = false;
+	bool show_fire = true;
 
 	bool show_logs = true;
 	bool show_gui = true;
 	bool shader_reload_failed = false;
 	bool copy_elapsed_times = true;
 	bool first_frame = true;
-	bool show_basis = false;
+	bool show_basis = true;
 	float basis_thickness_scale = 40.0f;
 	float basis_length_scale = 400.0f;
 
@@ -715,6 +731,18 @@ edan35::Assignment2::run()
 		}
 		glEndQuery(GL_TIME_ELAPSED);
 
+		//
+		//render fire
+		//
+		if (show_fire) {
+			glDisable(GL_CULL_FACE);
+			fire.render(view_projection,	// view matrix
+						glm::mat4(1.0f),	//world matrix
+						render_fire_shader,	//shader program
+						set_uniforms);				//set uniform
+			glEnable(GL_CULL_FACE);
+		}
+
 
 		utils::opengl::debug::beginDebugGroup("Draw GUI");
 		glBeginQuery(GL_TIME_ELAPSED, elapsed_time_queries[toU(ElapsedTimeQuery::GUI)]);
@@ -816,7 +844,7 @@ edan35::Assignment2::run()
 			ImGui::Checkbox("Show textures", &show_textures);
 			ImGui::Checkbox("Show light cones wireframe", &show_cone_wireframe);
 			ImGui::Separator();
-			ImGui::Checkbox("Show basis", &show_basis);
+			ImGui::Checkbox("Show fire", &show_fire);
 			ImGui::SliderFloat("Basis thickness scale", &basis_thickness_scale, 0.0f, 100.0f);
 			ImGui::SliderFloat("Basis length scale", &basis_length_scale, 0.0f, 100.0f);
 		}
@@ -1218,5 +1246,43 @@ loadCone()
 	glBindVertexArray(0u);
 
 	return cone;
+}
+
+bonobo::mesh_data
+loadFire()
+{
+	bonobo::mesh_data fire;
+	fire.vertices_nb = 6;
+	fire.drawing_mode = GL_TRIANGLES;
+	float vertexArrayData[6 * 4] = {
+		0.0f, 1.0f, 0.0f, 1.0f,
+		1.0f, 0.0f, 1.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 0.0f,
+
+		0.0f, 1.0f, 0.0f, 1.0f,
+		1.0f, 1.0f, 1.0f, 1.0f,
+		1.0f, 0.0f, 1.0f, 0.0f
+	};
+
+	glGenVertexArrays(1, &fire.vao);
+	assert(fire.vao != 0u);
+	glBindVertexArray(fire.vao);
+	{
+		utils::opengl::debug::nameObject(GL_VERTEX_ARRAY, fire.vao, "Fire VAO");
+
+		glGenBuffers(1, &fire.bo);
+		assert(fire.bo != 0u);
+		glBindBuffer(GL_ARRAY_BUFFER, fire.bo);
+		glBufferData(GL_ARRAY_BUFFER, fire.vertices_nb * 4 * sizeof(float), vertexArrayData, GL_STATIC_DRAW);
+		utils::opengl::debug::nameObject(GL_BUFFER, fire.bo, "Fire VBO");
+
+		glVertexAttribPointer(static_cast<int>(bonobo::shader_bindings::vertices), 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), reinterpret_cast<GLvoid const*>(0x0));
+		glEnableVertexAttribArray(static_cast<int>(bonobo::shader_bindings::vertices));
+
+		glBindBuffer(GL_ARRAY_BUFFER, 0u);
+	}
+	glBindVertexArray(0u);
+
+	return fire;
 }
 } // namespace
