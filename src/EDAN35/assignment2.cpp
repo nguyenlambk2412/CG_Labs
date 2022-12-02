@@ -30,7 +30,7 @@ namespace constant
 
 	constexpr float  scale_lengths       = 100.0f; // The scene is expressed in centimetres rather than metres, hence the x100.
 
-	constexpr size_t lights_nb           = 4;
+	constexpr size_t lights_nb           = 1;
 	constexpr float  light_intensity     = 72.0f * (scale_lengths * scale_lengths);
 	constexpr float  light_angle_falloff = glm::radians(45.0f);
 }
@@ -158,6 +158,17 @@ namespace
 	};
 	void fillAccumulateLightsShaderLocations(GLuint accumulate_lights_shader, AccumulateLightsShaderLocations& locations);
 
+	struct FireShaderLocations
+	{
+		GLuint ubo_CameraViewProjTransforms{ 0u };
+		GLuint cameraRightWorld{ 0u };
+		GLuint cameraUpWorld{ 0u };
+		GLuint particlePos{0u};
+		GLuint particleSize{ 0u };
+		GLuint ParticleColor{ 0u };
+	};
+	void fillFireShaderLocations(GLuint fire_shader_location, FireShaderLocations& locations);
+
 	bonobo::mesh_data loadCone();
 	bonobo::mesh_data loadFire();
 } // namespace
@@ -227,11 +238,13 @@ edan35::Assignment2::run()
 	Node fire;
 	auto const fire_geometry = loadFire();
 	fire.set_geometry(fire_geometry);
-
+	glm::vec3 particleColor = glm::vec3(1.0f, 0.0f, 1.0f);
+	glm::vec3 particlePos = glm::vec3(1.0f, 1.0f, 10.0f);
+	glm::vec2 particleSize = glm::vec2(5.0f);
 	//
 	// Setup the camera
 	//
-	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, 0.0f, 1.8f) * constant::scale_lengths);
+	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, 0.0f, 0.1f) * constant::scale_lengths);
 	mCamera.mMouseSensitivity = glm::vec2(0.003f);
 	mCamera.mMovementSpeed = glm::vec3(3.0f) * constant::scale_lengths; // 3 m/s => 10.8 km/h.
 
@@ -327,9 +340,9 @@ edan35::Assignment2::run()
 		LogError("Failed to load light fire rendering shader");
 		return;
 	}
-
+	FireShaderLocations fire_shader_locations;
+	fillFireShaderLocations(render_fire_shader, fire_shader_locations);
 	auto const set_uniforms = [](GLuint /*program*/){};
-
 	ViewProjTransforms camera_view_proj_transforms;
 	std::array<ViewProjTransforms, constant::lights_nb> light_view_proj_transforms;
 
@@ -349,7 +362,7 @@ edan35::Assignment2::run()
 	std::array<TRSTransformf, constant::lights_nb> lightTransforms;
 	std::array<glm::vec3, constant::lights_nb> lightColors;
 	int lights_nb = static_cast<int>(constant::lights_nb);
-	bool are_lights_paused = false;
+	bool are_lights_paused = true;
 
 	for (size_t i = 0; i < static_cast<size_t>(lights_nb); ++i) {
 		lightTransforms[i].SetTranslate(glm::vec3(0.0f, 1.25f, 0.0f) * constant::scale_lengths);
@@ -390,11 +403,11 @@ edan35::Assignment2::run()
 	bool show_logs = true;
 	bool show_gui = true;
 	bool shader_reload_failed = false;
-	bool copy_elapsed_times = true;
+	bool copy_elapsed_times = false;
 	bool first_frame = true;
 	bool show_basis = true;
-	float basis_thickness_scale = 40.0f;
-	float basis_length_scale = 400.0f;
+	float basis_thickness_scale = 5.0f;
+	float basis_length_scale = 10.0f;
 
 	while (!glfwWindowShouldClose(window)) {
 		auto const nowTime = std::chrono::high_resolution_clock::now();
@@ -429,6 +442,7 @@ edan35::Assignment2::run()
 				fillGBufferShaderLocations(fill_gbuffer_shader, fill_gbuffer_shader_locations);
 				fillShadowmapShaderLocations(fill_shadowmap_shader, fill_shadowmap_shader_locations);
 				fillAccumulateLightsShaderLocations(accumulate_lights_shader, accumulate_light_shader_locations);
+				fillFireShaderLocations(render_fire_shader, fire_shader_locations);
 			}
 		}
 		if (inputHandler.GetKeycodeState(GLFW_KEY_F3) & JUST_RELEASED)
@@ -734,13 +748,30 @@ edan35::Assignment2::run()
 		//
 		//render fire
 		//
+		
 		if (show_fire) {
+			glUseProgram(render_fire_shader);
+			//glm::mat4 = glm::normalize(&camera_view_proj_transforms.view_projection);
+			glUniform3f(fire_shader_locations.cameraRightWorld, camera_view_proj_transforms.view_projection[0][0],
+				camera_view_proj_transforms.view_projection[1][0],
+				camera_view_proj_transforms.view_projection[2][0]);
+			glUniform3f(fire_shader_locations.cameraUpWorld, camera_view_proj_transforms.view_projection[0][1],
+				camera_view_proj_transforms.view_projection[1][1],
+				camera_view_proj_transforms.view_projection[2][1]);
+			//glUniform3fv(fire_shader_locations.cameraRightWorld, 1, glm::value_ptr(particleColor));
+			//glUniform3fv(fire_shader_locations.cameraUpWorld, 1, glm::value_ptr(particleColor));
+			glUniform3fv(fire_shader_locations.ParticleColor,1, glm::value_ptr(particleColor));
+			glUniform3fv(fire_shader_locations.particlePos, 1, glm::value_ptr(particlePos));
+			glUniform2fv(fire_shader_locations.particleSize, 1, glm::value_ptr(particleSize));
+			//auto const vertex_model_to_world = glm::mat4(1.0f);
+			//glUniformMatrix4fv(fire_shader_locations.vertex_model_to_world, 1, GL_FALSE, glm::value_ptr(vertex_model_to_world));
 			glDisable(GL_CULL_FACE);
-			fire.render(view_projection,	// view matrix
+			fire.render(view_projection,	//view matrix
 						glm::mat4(1.0f),	//world matrix
 						render_fire_shader,	//shader program
-						set_uniforms);				//set uniform
+						set_uniforms);		//set uniform
 			glEnable(GL_CULL_FACE);
+			glUseProgram(0u);
 		}
 
 
@@ -1150,6 +1181,17 @@ void fillAccumulateLightsShaderLocations(GLuint accumulate_lights_shader, Accumu
 
 	glUniformBlockBinding(accumulate_lights_shader, locations.ubo_CameraViewProjTransforms, toU(UBO::CameraViewProjTransforms));
 	glUniformBlockBinding(accumulate_lights_shader, locations.ubo_LightViewProjTransforms, toU(UBO::LightViewProjTransforms));
+}
+
+void fillFireShaderLocations(GLuint fire_shader_location, FireShaderLocations& locations)
+{
+	locations.ubo_CameraViewProjTransforms = glGetUniformBlockIndex(fire_shader_location, "CameraViewProjTransforms");
+	locations.cameraRightWorld = glGetUniformLocation(fire_shader_location, "cameraRightWorld");
+	locations.cameraUpWorld = glGetUniformLocation(fire_shader_location, "cameraUpWorld");
+	locations.ParticleColor = glGetUniformLocation(fire_shader_location, "ParticleColor");
+	locations.particlePos = glGetUniformLocation(fire_shader_location, "particlePos");
+	locations.particleSize = glGetUniformLocation(fire_shader_location, "particleSize");
+	glUniformBlockBinding(fire_shader_location, locations.ubo_CameraViewProjTransforms, toU(UBO::CameraViewProjTransforms));
 }
 
 bonobo::mesh_data

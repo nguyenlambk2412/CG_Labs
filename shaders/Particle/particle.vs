@@ -1,19 +1,34 @@
 #version 410
+
 layout (location = 0) in vec4 vertex; // <vec2 position, vec2 texCoords>
 
-out vec2 TexCoords;
-out vec4 ParticleColor;
+struct ViewProjTransforms
+{
+	mat4 view_projection;
+	mat4 view_projection_inverse;
+};
+layout (std140) uniform CameraViewProjTransforms
+{
+	ViewProjTransforms camera;
+};
 
-uniform mat4 vertex_model_to_world;
-uniform mat4 vertex_world_to_clip;
+uniform vec3 cameraRightWorld;
+uniform vec3 cameraUpWorld;
+uniform vec3 particlePos;
+uniform vec2 particleSize;
 
-uniform vec2 offset;
-uniform vec4 color;
+
 
 void main()
 {
-    float scale = 1000.0f;
-    TexCoords = vertex.zw;
-    ParticleColor = color;
-    gl_Position = vertex_world_to_clip * vertex_model_to_world * vec4((vertex.xy * scale) + offset, 0.0, 1.0);
+	//vec3 cameraRightWorld	= (vec4(1.0f, 0.0f, 0.0f, 1.0f) * camera.view_projection_inverse).xyz;
+	//vec3 cameraUpWorld		= (vec4(0.0f, 1.0f, 0.0f, 1.0f) * camera.view_projection_inverse).xyz;
+
+	//vec3 vertexPosWorld = particlePosition + CameraRight_worldspace * vertex.x * particleSize.x + cameraUpWorld * vertex.y * particleSize.y;
+	vec3 vertexPosWorld = 
+		particlePos
+		+ cameraRightWorld * vertex.x * particleSize.x
+		+ cameraUpWorld * vertex.y * particleSize.y;
+	//vec3 vertexPosWorld = particlePos + vec3(vertex.xy*particleSize, 0.0f);
+    gl_Position = camera.view_projection  * vec4(vertexPosWorld, 1.0f);
 }
