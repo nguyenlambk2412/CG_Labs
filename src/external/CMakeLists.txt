@@ -31,6 +31,7 @@ target_include_directories (
 	PUBLIC
 		"${CMAKE_SOURCE_DIR}/src/external/Dear ImGui"
 		"${CMAKE_SOURCE_DIR}/src/external/GLAD"
+		"${CMAKE_SOURCE_DIR}/src/external/particle"
 )
 
 target_link_libraries (

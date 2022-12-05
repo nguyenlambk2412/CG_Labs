@@ -1,8 +1,10 @@
 #version 410
+in vec2 texCoords;
+uniform vec3 particleColor;
+uniform sampler2D particleTexture;
 
-uniform vec3 ParticleColor;
 out vec3 frag_color;
 void main()
 {
-	frag_color = ParticleColor;
+	frag_color = particleColor;//vec3(texture(particleTexture,texCoords));
 }

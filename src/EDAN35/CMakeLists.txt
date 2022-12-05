@@ -5,6 +5,8 @@ target_sources (
 	PRIVATE
 		[[assignment2.hpp]]
 		[[assignment2.cpp]]
+		[[particle_generator.h]]
+		[[particle_generator.cpp]]
 )
 
 target_link_libraries (EDAN35_Assignment2 PRIVATE assignment_setup)

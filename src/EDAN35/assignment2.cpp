@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <stdexcept>
 
+#include "particle_generator.h"
 namespace constant
 {
 	constexpr uint32_t shadowmap_res_x = 1024;
@@ -158,19 +159,7 @@ namespace
 	};
 	void fillAccumulateLightsShaderLocations(GLuint accumulate_lights_shader, AccumulateLightsShaderLocations& locations);
 
-	struct FireShaderLocations
-	{
-		GLuint ubo_CameraViewProjTransforms{ 0u };
-		GLuint cameraRightWorld{ 0u };
-		GLuint cameraUpWorld{ 0u };
-		GLuint particlePos{0u};
-		GLuint particleSize{ 0u };
-		GLuint ParticleColor{ 0u };
-	};
-	void fillFireShaderLocations(GLuint fire_shader_location, FireShaderLocations& locations);
-
 	bonobo::mesh_data loadCone();
-	bonobo::mesh_data loadFire();
 } // namespace
 
 edan35::Assignment2::Assignment2(WindowManager& windowManager) :
@@ -235,16 +224,10 @@ edan35::Assignment2::run()
 	Node cone;
 	cone.set_geometry(cone_geometry);
 
-	Node fire;
-	auto const fire_geometry = loadFire();
-	fire.set_geometry(fire_geometry);
-	glm::vec3 particleColor = glm::vec3(1.0f, 0.0f, 1.0f);
-	glm::vec3 particlePos = glm::vec3(1.0f, 1.0f, 10.0f);
-	glm::vec2 particleSize = glm::vec2(5.0f);
 	//
 	// Setup the camera
 	//
-	mCamera.mWorld.SetTranslate(glm::vec3(0.0f, 0.0f, 0.1f) * constant::scale_lengths);
+	mCamera.mWorld.SetTranslate(glm::vec3(2.0f, 1.0f, 2.0f) * constant::scale_lengths);
 	mCamera.mMouseSensitivity = glm::vec2(0.003f);
 	mCamera.mMovementSpeed = glm::vec3(3.0f) * constant::scale_lengths; // 3 m/s => 10.8 km/h.
 
@@ -340,8 +323,9 @@ edan35::Assignment2::run()
 		LogError("Failed to load light fire rendering shader");
 		return;
 	}
-	FireShaderLocations fire_shader_locations;
-	fillFireShaderLocations(render_fire_shader, fire_shader_locations);
+
+	ParticleGenerator particles(render_fire_shader, 100);
+
 	auto const set_uniforms = [](GLuint /*program*/){};
 	ViewProjTransforms camera_view_proj_transforms;
 	std::array<ViewProjTransforms, constant::lights_nb> light_view_proj_transforms;
@@ -398,7 +382,7 @@ edan35::Assignment2::run()
 	auto lastTime = std::chrono::high_resolution_clock::now();
 	bool show_textures = false;
 	bool show_cone_wireframe = false;
-	bool show_fire = true;
+	bool show_fire = false;
 
 	bool show_logs = true;
 	bool show_gui = true;
@@ -412,6 +396,7 @@ edan35::Assignment2::run()
 	while (!glfwWindowShouldClose(window)) {
 		auto const nowTime = std::chrono::high_resolution_clock::now();
 		auto const deltaTimeUs = std::chrono::duration_cast<std::chrono::microseconds>(nowTime - lastTime);
+		auto const deltaTimMs = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - lastTime);
 		lastTime = nowTime;
 		if (!are_lights_paused)
 			seconds_nb += std::chrono::duration<decltype(seconds_nb)>(deltaTimeUs).count();
@@ -442,7 +427,6 @@ edan35::Assignment2::run()
 				fillGBufferShaderLocations(fill_gbuffer_shader, fill_gbuffer_shader_locations);
 				fillShadowmapShaderLocations(fill_shadowmap_shader, fill_shadowmap_shader_locations);
 				fillAccumulateLightsShaderLocations(accumulate_lights_shader, accumulate_light_shader_locations);
-				fillFireShaderLocations(render_fire_shader, fire_shader_locations);
 			}
 		}
 		if (inputHandler.GetKeycodeState(GLFW_KEY_F3) & JUST_RELEASED)
@@ -750,28 +734,8 @@ edan35::Assignment2::run()
 		//
 		
 		if (show_fire) {
-			glUseProgram(render_fire_shader);
-			//glm::mat4 = glm::normalize(&camera_view_proj_transforms.view_projection);
-			glUniform3f(fire_shader_locations.cameraRightWorld, camera_view_proj_transforms.view_projection[0][0],
-				camera_view_proj_transforms.view_projection[1][0],
-				camera_view_proj_transforms.view_projection[2][0]);
-			glUniform3f(fire_shader_locations.cameraUpWorld, camera_view_proj_transforms.view_projection[0][1],
-				camera_view_proj_transforms.view_projection[1][1],
-				camera_view_proj_transforms.view_projection[2][1]);
-			//glUniform3fv(fire_shader_locations.cameraRightWorld, 1, glm::value_ptr(particleColor));
-			//glUniform3fv(fire_shader_locations.cameraUpWorld, 1, glm::value_ptr(particleColor));
-			glUniform3fv(fire_shader_locations.ParticleColor,1, glm::value_ptr(particleColor));
-			glUniform3fv(fire_shader_locations.particlePos, 1, glm::value_ptr(particlePos));
-			glUniform2fv(fire_shader_locations.particleSize, 1, glm::value_ptr(particleSize));
-			//auto const vertex_model_to_world = glm::mat4(1.0f);
-			//glUniformMatrix4fv(fire_shader_locations.vertex_model_to_world, 1, GL_FALSE, glm::value_ptr(vertex_model_to_world));
-			glDisable(GL_CULL_FACE);
-			fire.render(view_projection,	//view matrix
-						glm::mat4(1.0f),	//world matrix
-						render_fire_shader,	//shader program
-						set_uniforms);		//set uniform
-			glEnable(GL_CULL_FACE);
-			glUseProgram(0u);
+			particles.Update((float)deltaTimMs.count(), 2);
+			particles.Draw(camera_view_proj_transforms.view_projection);
 		}
 
 
@@ -1183,16 +1147,6 @@ void fillAccumulateLightsShaderLocations(GLuint accumulate_lights_shader, Accumu
 	glUniformBlockBinding(accumulate_lights_shader, locations.ubo_LightViewProjTransforms, toU(UBO::LightViewProjTransforms));
 }
 
-void fillFireShaderLocations(GLuint fire_shader_location, FireShaderLocations& locations)
-{
-	locations.ubo_CameraViewProjTransforms = glGetUniformBlockIndex(fire_shader_location, "CameraViewProjTransforms");
-	locations.cameraRightWorld = glGetUniformLocation(fire_shader_location, "cameraRightWorld");
-	locations.cameraUpWorld = glGetUniformLocation(fire_shader_location, "cameraUpWorld");
-	locations.ParticleColor = glGetUniformLocation(fire_shader_location, "ParticleColor");
-	locations.particlePos = glGetUniformLocation(fire_shader_location, "particlePos");
-	locations.particleSize = glGetUniformLocation(fire_shader_location, "particleSize");
-	glUniformBlockBinding(fire_shader_location, locations.ubo_CameraViewProjTransforms, toU(UBO::CameraViewProjTransforms));
-}
 
 bonobo::mesh_data
 loadCone()
@@ -1290,41 +1244,5 @@ loadCone()
 	return cone;
 }
 
-bonobo::mesh_data
-loadFire()
-{
-	bonobo::mesh_data fire;
-	fire.vertices_nb = 6;
-	fire.drawing_mode = GL_TRIANGLES;
-	float vertexArrayData[6 * 4] = {
-		0.0f, 1.0f, 0.0f, 1.0f,
-		1.0f, 0.0f, 1.0f, 0.0f,
-		0.0f, 0.0f, 0.0f, 0.0f,
 
-		0.0f, 1.0f, 0.0f, 1.0f,
-		1.0f, 1.0f, 1.0f, 1.0f,
-		1.0f, 0.0f, 1.0f, 0.0f
-	};
-
-	glGenVertexArrays(1, &fire.vao);
-	assert(fire.vao != 0u);
-	glBindVertexArray(fire.vao);
-	{
-		utils::opengl::debug::nameObject(GL_VERTEX_ARRAY, fire.vao, "Fire VAO");
-
-		glGenBuffers(1, &fire.bo);
-		assert(fire.bo != 0u);
-		glBindBuffer(GL_ARRAY_BUFFER, fire.bo);
-		glBufferData(GL_ARRAY_BUFFER, fire.vertices_nb * 4 * sizeof(float), vertexArrayData, GL_STATIC_DRAW);
-		utils::opengl::debug::nameObject(GL_BUFFER, fire.bo, "Fire VBO");
-
-		glVertexAttribPointer(static_cast<int>(bonobo::shader_bindings::vertices), 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), reinterpret_cast<GLvoid const*>(0x0));
-		glEnableVertexAttribArray(static_cast<int>(bonobo::shader_bindings::vertices));
-
-		glBindBuffer(GL_ARRAY_BUFFER, 0u);
-	}
-	glBindVertexArray(0u);
-
-	return fire;
-}
 } // namespace
