@@ -11,6 +11,7 @@
 #include "core/node.hpp"
 #include "core/opengl.hpp"
 #include "core/ShaderProgramManager.hpp"
+#include "particle_generator.hpp"
 
 #include <imgui.h>
 #include <glm/glm.hpp>
@@ -234,13 +235,16 @@ edan35::Assignment2::run()
 	auto const cone_geometry = loadCone();
 	Node cone;
 	cone.set_geometry(cone_geometry);
-
-	Node fire;
+    //
+    //init the fire obj
+    //
 	auto const fire_geometry = loadFire();
-	fire.set_geometry(fire_geometry);
 	glm::vec3 particleColor = glm::vec3(1.0f, 0.0f, 1.0f);
 	glm::vec3 particlePos = glm::vec3(1.0f, 1.0f, 10.0f);
 	glm::vec2 particleSize = glm::vec2(5.0f);
+    int particleNum = 50;
+    float updateStep = 0.01;
+    ParticleGenerator *Particles = new ParticleGenerator(fire_geometry, particleColor, particlePos, particleSize, particleNum);
 	//
 	// Setup the camera
 	//
@@ -333,9 +337,9 @@ edan35::Assignment2::run()
 
 	GLuint render_fire_shader = 0u;
 	program_manager.CreateAndRegisterProgram("Render fire",
-		{ { ShaderType::vertex, "Particle/particle.vs" },
-		  { ShaderType::fragment, "Particle/particle.frag" } },
-		render_fire_shader);
+                                            { { ShaderType::vertex, "Particle/particle.vs" },
+                                              { ShaderType::fragment, "Particle/particle.frag" } },
+                                            render_fire_shader);
 	if (render_fire_shader == 0u) {
 		LogError("Failed to load light fire rendering shader");
 		return;
@@ -750,28 +754,34 @@ edan35::Assignment2::run()
 		//
 		
 		if (show_fire) {
-			glUseProgram(render_fire_shader);
-			//glm::mat4 = glm::normalize(&camera_view_proj_transforms.view_projection);
-			glUniform3f(fire_shader_locations.cameraRightWorld, camera_view_proj_transforms.view_projection[0][0],
-				camera_view_proj_transforms.view_projection[1][0],
-				camera_view_proj_transforms.view_projection[2][0]);
-			glUniform3f(fire_shader_locations.cameraUpWorld, camera_view_proj_transforms.view_projection[0][1],
-				camera_view_proj_transforms.view_projection[1][1],
-				camera_view_proj_transforms.view_projection[2][1]);
-			//glUniform3fv(fire_shader_locations.cameraRightWorld, 1, glm::value_ptr(particleColor));
-			//glUniform3fv(fire_shader_locations.cameraUpWorld, 1, glm::value_ptr(particleColor));
-			glUniform3fv(fire_shader_locations.ParticleColor,1, glm::value_ptr(particleColor));
-			glUniform3fv(fire_shader_locations.particlePos, 1, glm::value_ptr(particlePos));
-			glUniform2fv(fire_shader_locations.particleSize, 1, glm::value_ptr(particleSize));
-			//auto const vertex_model_to_world = glm::mat4(1.0f);
-			//glUniformMatrix4fv(fire_shader_locations.vertex_model_to_world, 1, GL_FALSE, glm::value_ptr(vertex_model_to_world));
-			glDisable(GL_CULL_FACE);
-			fire.render(view_projection,	//view matrix
-						glm::mat4(1.0f),	//world matrix
-						render_fire_shader,	//shader program
-						set_uniforms);		//set uniform
-			glEnable(GL_CULL_FACE);
-			glUseProgram(0u);
+            Particles->Update(updateStep , 4);
+            for (Particle particle : Particles->GetParticles())
+            {
+                if (particle.Life > 0.0f)
+                {
+                    glUseProgram(render_fire_shader);
+                    //glm::mat4 = glm::normalize(&camera_view_proj_transforms.view_projection);
+                    glUniform3f(fire_shader_locations.cameraRightWorld, camera_view_proj_transforms.view_projection[0][0],
+                                camera_view_proj_transforms.view_projection[1][0],
+                                camera_view_proj_transforms.view_projection[2][0]);
+                    glUniform3f(fire_shader_locations.cameraUpWorld, camera_view_proj_transforms.view_projection[0][1],
+                                camera_view_proj_transforms.view_projection[1][1],
+                                camera_view_proj_transforms.view_projection[2][1]);
+                    glUniform3fv(fire_shader_locations.ParticleColor,1, glm::value_ptr(particle.Color));
+                    glUniform3fv(fire_shader_locations.particlePos, 1, glm::value_ptr(particle.Position));
+                    glUniform2fv(fire_shader_locations.particleSize, 1, glm::value_ptr(particle.Size));
+                    //auto const vertex_model_to_world = glm::mat4(1.0f);
+                    //glUniformMatrix4fv(fire_shader_locations.vertex_model_to_world, 1, GL_FALSE, glm::value_ptr(vertex_model_to_world));
+                    glDisable(GL_CULL_FACE);
+                    particle.node.set_geometry(Particles->GetShape()); // load geometry when it starts to render
+                    particle.node.render(view_projection,	//view matrix
+                                         glm::mat4(1.0f),	//world matrix
+                                         render_fire_shader,	//shader program
+                                         set_uniforms);		//set uniform
+                    glEnable(GL_CULL_FACE);
+                    glUseProgram(0u);
+                }
+            }
 		}
 
 
