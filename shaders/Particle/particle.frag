@@ -6,5 +6,6 @@ uniform sampler2D particleTexture;
 out vec3 frag_color;
 void main()
 {
-	frag_color = particleColor;//vec3(texture(particleTexture,texCoords));
+	frag_color = particleColor;
+	//frag_color = vec3(texture(particleTexture,texCoords));
 }

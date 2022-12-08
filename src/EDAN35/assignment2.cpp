@@ -324,7 +324,7 @@ edan35::Assignment2::run()
 		return;
 	}
 
-	ParticleGenerator particles(render_fire_shader, 100);
+	ParticleGenerator particles(render_fire_shader, 500);
 
 	auto const set_uniforms = [](GLuint /*program*/){};
 	ViewProjTransforms camera_view_proj_transforms;

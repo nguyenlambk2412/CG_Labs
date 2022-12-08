@@ -40,15 +40,15 @@ void ParticleGenerator::init()
 
 	//load texture
 	this->particleTexture = bonobo::loadTexture2D(config::resources_path("textures/fire.jpeg"));
+	
 
 	// create this->amount default particle instances
 	for (unsigned int i = 0; i < this->amount; ++i)
 	{
 		this->particles.push_back(Particle(
-			glm::vec3(GetRandom(-3.0f, 3.0f), 0.0f, GetRandom(-3.0f, 3.0f)), //position
-			glm::vec3(0.0f, GetRandom(0.001f, 0.01), 0.0f),	//velocity
-			glm::vec3(GetRandom(0.9f, 1.0f), GetRandom(0.9f, 1.0f), 0.0f),	//color
-			glm::vec2(GetRandom(0.1f, 1.0f), GetRandom(0.1f, 1.0f)),	//color
+			glm::vec3(GetRandom(-POS_X_LIM, POS_X_LIM), 0.0f, GetRandom(-POS_Z_LIM, POS_X_LIM)), //position
+			glm::vec3(GetRandom(0.0f, VEL_X_LIM), GetRandom(0.001f, VEL_Y_LIM), GetRandom(0.0f, VEL_Z_LIM)),	//velocity
+			glm::vec4(COLOR_RED_VAL, GetRandom(0.1, COLOR_GREEN_VAL), GetRandom(0.1, COLOR_BLUE_VAL), 1.0f),	//color
 			0.0f
 			));
 	}
@@ -74,7 +74,7 @@ void ParticleGenerator::Update(float dt, unsigned int newParticles)
 		if (p.Life > 0.0f)
 		{	// particle is alive, thus update
 			p.Position += p.Velocity * dt;
-			p.Color -= dt * glm::vec3(0.0001f, 0.0001f,0.0f);
+			p.Color -= dt * glm::vec4(0.0001f, 0.0001f,0.0f, 0.0001f);
 		}
 	}
 }
@@ -87,8 +87,11 @@ void ParticleGenerator::Draw(glm::mat4 viewProjMatrix)
 	glUseProgram(particleShader);
 	glDisable(GL_CULL_FACE);
 	glBindVertexArray(this->particleVAO);
-	glUniform1i(particleUniformLocation.particleTexture, 0);
+	
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, particleTexture);
+	glUniform1i(particleUniformLocation.particleTexture, 0);
+	
 	for (Particle particle : this->particles)
 	{
 		if (particle.Life > 0.0f)
@@ -107,7 +110,6 @@ void ParticleGenerator::Draw(glm::mat4 viewProjMatrix)
 			//update particle position, color, size
 			glUniform3fv(particleUniformLocation.particleColor, 1, glm::value_ptr(particle.Color));
 			glUniform3fv(particleUniformLocation.particlePos, 1, glm::value_ptr(particle.Position));
-			glUniform2fv(particleUniformLocation.particleSize, 1, glm::value_ptr(particle.Size));
 			glDrawArrays(GL_TRIANGLES, 0, 6);
 		}
 	}
@@ -126,7 +128,6 @@ void ParticleGenerator::GetParticleUniLocations()
 	particleUniformLocation.cameraUpWorld = glGetUniformLocation(particleShader, "cameraUpWorld");
 	particleUniformLocation.particleColor = glGetUniformLocation(particleShader, "particleColor");
 	particleUniformLocation.particlePos = glGetUniformLocation(particleShader, "particlePos");
-	particleUniformLocation.particleSize = glGetUniformLocation(particleShader, "particleSize");
 	particleUniformLocation.particleTexture = glGetUniformLocation(particleShader, "particleTexture");
 	
 }
@@ -161,10 +162,9 @@ unsigned int ParticleGenerator::firstUnusedParticle()
 
 void ParticleGenerator::respawnParticle(Particle& particle)
 {
-	particle.Position = glm::vec3(GetRandom(-3.0f, 3.0f), 0.0f, GetRandom(-3.0f, 3.0f)); //position
-	particle.Velocity = glm::vec3(0.0f, GetRandom(0.001f, 0.01), 0.0f);	//velocity
-	particle.Color = glm::vec3(GetRandom(0.9f, 1.0f), GetRandom(0.9f, 1.0f), 0.0f);	//color
-	particle.Size = glm::vec2(GetRandom(0.1f, 1.0f), GetRandom(0.1f, 1.0f));	//size
+	particle.Position = glm::vec3(GetRandom(-POS_X_LIM, POS_X_LIM), 0.0f, GetRandom(-POS_Z_LIM, POS_X_LIM)); //position
+	particle.Velocity = glm::vec3(GetRandom(0.0f, VEL_X_LIM), GetRandom(0.001f, VEL_Y_LIM), GetRandom(0.0f, VEL_Z_LIM));	//velocity
+	particle.Color = glm::vec4(COLOR_RED_VAL, GetRandom(0.1, COLOR_GREEN_VAL), GetRandom(0.1, COLOR_BLUE_VAL), 1.0f);	//color
 	particle.Life = 5000.0f;// GetRandom(5000.0f, 10000.0f);
 	
 }

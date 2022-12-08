@@ -19,16 +19,14 @@
 // Represents a single particle and its state
 struct Particle {
     glm::vec3 Position, Velocity;
-    glm::vec3 Color;
-	glm::vec2 Size;
+    glm::vec4 Color;
     float     Life;
 
-	Particle(glm::vec3 pos, glm::vec3 vec, glm::vec3 col, glm::vec2 siz, float lif)
+	Particle(glm::vec3 pos, glm::vec3 vec, glm::vec4 col, float lif)
 	{
 		Position = pos;
 		Velocity = vec;
 		Color = col;
-		Size = siz;
 		Life = lif;
 	}
 };
@@ -75,6 +73,17 @@ private:
 
 	unsigned int firstUnusedParticle();
 	void respawnParticle(Particle& particle);
+
+	const float VEL_Y_LIM = 0.01f;
+	const float VEL_X_LIM = 0.0002f;
+	const float VEL_Z_LIM = 0.0002f;
+
+	const float COLOR_RED_VAL = 1.0F;
+	const float COLOR_GREEN_VAL = 0.5F;
+	const float COLOR_BLUE_VAL = 0.5F;
+
+	const float POS_X_LIM = 6.0f;
+	const float POS_Z_LIM = 6.0f;
 };
 
 #endif
