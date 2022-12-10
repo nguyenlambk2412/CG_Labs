@@ -324,7 +324,7 @@ edan35::Assignment2::run()
 		return;
 	}
 
-	ParticleGenerator particles(render_fire_shader, 500);
+	ParticleGenerator particles(render_fire_shader, 10000);
 
 	auto const set_uniforms = [](GLuint /*program*/){};
 	ViewProjTransforms camera_view_proj_transforms;
@@ -380,9 +380,11 @@ edan35::Assignment2::run()
 	auto seconds_nb = 0.0f;
 	std::array<GLuint64, toU(ElapsedTimeQuery::Count)> pass_elapsed_times;
 	auto lastTime = std::chrono::high_resolution_clock::now();
-	bool show_textures = false;
-	bool show_cone_wireframe = false;
+	bool pauseFire = false;
 	bool show_fire = false;
+	float particleSize = 10.0f;
+	bool show_cone_wireframe = false;
+	
 
 	bool show_logs = true;
 	bool show_gui = true;
@@ -396,7 +398,7 @@ edan35::Assignment2::run()
 	while (!glfwWindowShouldClose(window)) {
 		auto const nowTime = std::chrono::high_resolution_clock::now();
 		auto const deltaTimeUs = std::chrono::duration_cast<std::chrono::microseconds>(nowTime - lastTime);
-		auto const deltaTimMs = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - lastTime);
+		//auto const deltaTimMs = std::chrono::duration_cast<std::chrono::milliseconds>(nowTime - lastTime);
 		lastTime = nowTime;
 		if (!are_lights_paused)
 			seconds_nb += std::chrono::duration<decltype(seconds_nb)>(deltaTimeUs).count();
@@ -734,8 +736,8 @@ edan35::Assignment2::run()
 		//
 		
 		if (show_fire) {
-			particles.Update((float)deltaTimMs.count(), 2);
-			particles.Draw(camera_view_proj_transforms.view_projection);
+			if(!pauseFire) particles.Update(0.02f, 5);
+			particles.Draw(camera_view_proj_transforms.view_projection, particleSize);
 		}
 
 
@@ -755,18 +757,7 @@ edan35::Assignment2::run()
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fbos[toU(FBO::Resolve)]);
 		}
 
-		//
-		// Output content of the g-buffer as well as of the shadowmap, for debugging purposes
-		//
-		if (show_textures) {
-			bonobo::displayTexture({-0.95f, -0.95f}, {-0.55f, -0.55f}, textures[toU(Texture::GBufferDiffuse)],            samplers[toU(Sampler::Linear)], {0, 1, 2, -1}, glm::uvec2(framebuffer_width, framebuffer_height));
-			bonobo::displayTexture({-0.45f, -0.95f}, {-0.05f, -0.55f}, textures[toU(Texture::GBufferSpecular)],           samplers[toU(Sampler::Linear)], {0, 1, 2, -1}, glm::uvec2(framebuffer_width, framebuffer_height));
-			bonobo::displayTexture({ 0.05f, -0.95f}, { 0.45f, -0.55f}, textures[toU(Texture::GBufferWorldSpaceNormal)],   samplers[toU(Sampler::Linear)], {0, 1, 2, -1}, glm::uvec2(framebuffer_width, framebuffer_height));
-			bonobo::displayTexture({ 0.55f, -0.95f}, { 0.95f, -0.55f}, textures[toU(Texture::DepthBuffer)],               samplers[toU(Sampler::Linear)], {0, 0, 0, -1}, glm::uvec2(framebuffer_width, framebuffer_height), true, mCamera.mNear, mCamera.mFar);
-			bonobo::displayTexture({-0.95f,  0.55f}, {-0.55f,  0.95f}, textures[toU(Texture::ShadowMap)],                 samplers[toU(Sampler::Linear)], {0, 0, 0, -1}, glm::uvec2(framebuffer_width, framebuffer_height), true, lightProjectionNearPlane, lightProjectionFarPlane);
-			bonobo::displayTexture({-0.45f,  0.55f}, {-0.05f,  0.95f}, textures[toU(Texture::LightDiffuseContribution)],  samplers[toU(Sampler::Linear)], {0, 1, 2, -1}, glm::uvec2(framebuffer_width, framebuffer_height));
-			bonobo::displayTexture({ 0.05f,  0.55f}, { 0.45f,  0.95f}, textures[toU(Texture::LightSpecularContribution)], samplers[toU(Sampler::Linear)], {0, 1, 2, -1}, glm::uvec2(framebuffer_width, framebuffer_height));
-		}
+
 
 		//
 		// Reset viewport back to normal
@@ -834,14 +825,9 @@ edan35::Assignment2::run()
 
 		opened = ImGui::Begin("Scene Controls", nullptr, ImGuiWindowFlags_None);
 		if (opened) {
-			ImGui::Checkbox("Pause lights", &are_lights_paused);
-			ImGui::SliderInt("Number of lights", &lights_nb, 1, static_cast<int>(constant::lights_nb));
-			ImGui::Checkbox("Show textures", &show_textures);
-			ImGui::Checkbox("Show light cones wireframe", &show_cone_wireframe);
-			ImGui::Separator();
+			ImGui::Checkbox("Pause Fire", &pauseFire);
 			ImGui::Checkbox("Show fire", &show_fire);
-			ImGui::SliderFloat("Basis thickness scale", &basis_thickness_scale, 0.0f, 100.0f);
-			ImGui::SliderFloat("Basis length scale", &basis_length_scale, 0.0f, 100.0f);
+			ImGui::SliderFloat("Particle Size", &particleSize, 1.0f, 50.0f);
 		}
 		ImGui::End();
 

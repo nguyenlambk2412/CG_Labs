@@ -16,17 +16,36 @@
 #include "config.hpp"
 
 
+const float PARTICLE_LIFE = 1.0f;
+const float VEL_Y_LIM_MAX = 120.0f;
+const float VEL_Y_LIM_MIN = 80.0f;
+const float VEL_X_LIM_MAX = 80.0f;
+const float VEL_X_LIM_MIN = 50.0f;
+const float VEL_Z_LIM_MAX = 80.0f;
+const float VEL_Z_LIM_MIN = 50.0f;
+
+const float COLOR_RED_VAL = 1.0F;
+const float COLOR_GREEN_VAL = 0.9F;
+const float COLOR_BLUE_VAL = 0.2F;
+
+const float POS_X_LIM = 20.0f;
+const float POS_Z_LIM = 20.0f;
+
 // Represents a single particle and its state
 struct Particle {
+	float OrgPosX;
+	float OrgPosZ;
     glm::vec3 Position, Velocity;
-    glm::vec4 Color;
+    glm::vec3 Color;
     float     Life;
 
-	Particle(glm::vec3 pos, glm::vec3 vec, glm::vec4 col, float lif)
+	Particle(glm::vec3 pos, glm::vec3 vec, float lif)
 	{
 		Position = pos;
+		OrgPosX = pos.x;
+		OrgPosZ = pos.z;
 		Velocity = vec;
-		Color = col;
+		//Color = glm::vec3(COLOR_RED_VAL, (VEL_X_LIM - abs(OrgPosX)) / VEL_X_LIM, (VEL_Z_LIM - abs(OrgPosZ)) / VEL_Z_LIM);
 		Life = lif;
 	}
 };
@@ -40,6 +59,7 @@ struct ParticleShaderLocations
 	GLuint particleSize{ 0u };
 	GLuint particleColor{ 0u };
 	GLuint particleTexture{ 0u };
+	GLuint particleAge{ 0u };
 };
 
 
@@ -54,7 +74,7 @@ public:
     // update all particles
     void Update(float dt, unsigned int newParticles);
     // render all particles
-	void Draw(glm::mat4 viewProjMatrix);
+	void Draw(glm::mat4 viewProjMatrix, float tempSize);
 
 private:
     // state
@@ -74,16 +94,6 @@ private:
 	unsigned int firstUnusedParticle();
 	void respawnParticle(Particle& particle);
 
-	const float VEL_Y_LIM = 0.01f;
-	const float VEL_X_LIM = 0.0002f;
-	const float VEL_Z_LIM = 0.0002f;
-
-	const float COLOR_RED_VAL = 1.0F;
-	const float COLOR_GREEN_VAL = 0.5F;
-	const float COLOR_BLUE_VAL = 0.5F;
-
-	const float POS_X_LIM = 6.0f;
-	const float POS_Z_LIM = 6.0f;
 };
 
 #endif

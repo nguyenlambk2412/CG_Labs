@@ -39,7 +39,7 @@ void ParticleGenerator::init()
 	glBindVertexArray(0);
 
 	//load texture
-	this->particleTexture = bonobo::loadTexture2D(config::resources_path("textures/fire.jpeg"));
+	this->particleTexture = bonobo::loadTexture2D(config::resources_path("textures/Fire1.png"), true);
 	
 
 	// create this->amount default particle instances
@@ -47,8 +47,9 @@ void ParticleGenerator::init()
 	{
 		this->particles.push_back(Particle(
 			glm::vec3(GetRandom(-POS_X_LIM, POS_X_LIM), 0.0f, GetRandom(-POS_Z_LIM, POS_X_LIM)), //position
-			glm::vec3(GetRandom(0.0f, VEL_X_LIM), GetRandom(0.001f, VEL_Y_LIM), GetRandom(0.0f, VEL_Z_LIM)),	//velocity
-			glm::vec4(COLOR_RED_VAL, GetRandom(0.1, COLOR_GREEN_VAL), GetRandom(0.1, COLOR_BLUE_VAL), 1.0f),	//color
+			glm::vec3(	GetRandom(VEL_X_LIM_MIN, VEL_X_LIM_MAX),
+						GetRandom(VEL_Y_LIM_MIN, VEL_Y_LIM_MAX),
+						GetRandom(VEL_Z_LIM_MIN, VEL_Z_LIM_MAX)),	//velocity
 			0.0f
 			));
 	}
@@ -73,17 +74,21 @@ void ParticleGenerator::Update(float dt, unsigned int newParticles)
 		p.Life -= dt; // reduce life
 		if (p.Life > 0.0f)
 		{	// particle is alive, thus update
-			p.Position += p.Velocity * dt;
-			p.Color -= dt * glm::vec4(0.0001f, 0.0001f,0.0f, 0.0001f);
+			float deviate = sin(3.14f * p.Life / (2 * PARTICLE_LIFE));
+			p.Position.x = p.OrgPosX * deviate;
+			p.Position.z = p.OrgPosZ * deviate;
+			p.Position.y += p.Velocity.y * dt;
+			//p.Color -= dt * glm::vec3(0.0001f, 0.0001f,0.0f);
 		}
 	}
 }
 
 // render all particles
-void ParticleGenerator::Draw(glm::mat4 viewProjMatrix)
+void ParticleGenerator::Draw(glm::mat4 viewProjMatrix, float tempSize)
 {
 	// use additive blending to give it a 'glow' effect
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glUseProgram(particleShader);
 	glDisable(GL_CULL_FACE);
 	glBindVertexArray(this->particleVAO);
@@ -91,7 +96,7 @@ void ParticleGenerator::Draw(glm::mat4 viewProjMatrix)
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, particleTexture);
 	glUniform1i(particleUniformLocation.particleTexture, 0);
-	
+	glUniform1f(particleUniformLocation.particleSize, tempSize);
 	for (Particle particle : this->particles)
 	{
 		if (particle.Life > 0.0f)
@@ -110,6 +115,7 @@ void ParticleGenerator::Draw(glm::mat4 viewProjMatrix)
 			//update particle position, color, size
 			glUniform3fv(particleUniformLocation.particleColor, 1, glm::value_ptr(particle.Color));
 			glUniform3fv(particleUniformLocation.particlePos, 1, glm::value_ptr(particle.Position));
+			glUniform1f(particleUniformLocation.particleAge, particle.Life);
 			glDrawArrays(GL_TRIANGLES, 0, 6);
 		}
 	}
@@ -117,7 +123,7 @@ void ParticleGenerator::Draw(glm::mat4 viewProjMatrix)
 	// don't forget to reset to default blending mode
 	glBindVertexArray(0);
 	glEnable(GL_CULL_FACE);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_BLEND);
 	glUseProgram(0u);
 }
 
@@ -128,7 +134,10 @@ void ParticleGenerator::GetParticleUniLocations()
 	particleUniformLocation.cameraUpWorld = glGetUniformLocation(particleShader, "cameraUpWorld");
 	particleUniformLocation.particleColor = glGetUniformLocation(particleShader, "particleColor");
 	particleUniformLocation.particlePos = glGetUniformLocation(particleShader, "particlePos");
-	particleUniformLocation.particleTexture = glGetUniformLocation(particleShader, "particleTexture");
+	particleUniformLocation.particleTexture = glGetUniformLocation(particleShader, "particleTexture"); 
+	particleUniformLocation.particleAge = glGetUniformLocation(particleShader, "particleAge");
+	particleUniformLocation.particleSize = glGetUniformLocation(particleShader, "particleSize");
+	
 	
 }
 
@@ -163,8 +172,15 @@ unsigned int ParticleGenerator::firstUnusedParticle()
 void ParticleGenerator::respawnParticle(Particle& particle)
 {
 	particle.Position = glm::vec3(GetRandom(-POS_X_LIM, POS_X_LIM), 0.0f, GetRandom(-POS_Z_LIM, POS_X_LIM)); //position
-	particle.Velocity = glm::vec3(GetRandom(0.0f, VEL_X_LIM), GetRandom(0.001f, VEL_Y_LIM), GetRandom(0.0f, VEL_Z_LIM));	//velocity
-	particle.Color = glm::vec4(COLOR_RED_VAL, GetRandom(0.1, COLOR_GREEN_VAL), GetRandom(0.1, COLOR_BLUE_VAL), 1.0f);	//color
-	particle.Life = 5000.0f;// GetRandom(5000.0f, 10000.0f);
+	particle.OrgPosX = particle.Position.x;
+	particle.OrgPosZ = particle.Position.z;
+	particle.Velocity = glm::vec3(
+		GetRandom(VEL_X_LIM_MIN, VEL_X_LIM_MAX),
+		GetRandom(VEL_Y_LIM_MIN, VEL_Y_LIM_MAX),
+		GetRandom(VEL_Z_LIM_MIN, VEL_Z_LIM_MAX));	//velocity
+	//particle.Color = glm::vec3(COLOR_RED_VAL, (VEL_X_LIM - abs(particle.OrgPosX)) / VEL_X_LIM, (VEL_Z_LIM - abs(particle.OrgPosZ)) / VEL_Z_LIM);
+	particle.Life = PARTICLE_LIFE;// GetRandom(5000.0f, 10000.0f);
 	
 }
+
+
