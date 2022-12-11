@@ -84,8 +84,11 @@ void ParticleGenerator::Update(float dt, unsigned int newParticles)
 }
 
 // render all particles
-void ParticleGenerator::Draw(glm::mat4 viewProjMatrix, float tempSize)
+void ParticleGenerator::Draw(glm::mat4 viewProjMatrix, float tempSize, glm::vec3 camera)
 {
+    std::map<float, int> sorted;
+    this->depthSort(sorted, camera);
+    
 	// use additive blending to give it a 'glow' effect
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -97,28 +100,27 @@ void ParticleGenerator::Draw(glm::mat4 viewProjMatrix, float tempSize)
 	glBindTexture(GL_TEXTURE_2D, particleTexture);
 	glUniform1i(particleUniformLocation.particleTexture, 0);
 	glUniform1f(particleUniformLocation.particleSize, tempSize);
-	for (Particle particle : this->particles)
-	{
-		if (particle.Life > 0.0f)
-		{
-			//update camera view projection matrix
-			glUniformMatrix4fv(particleUniformLocation.viewProjMatrix,1, GL_FALSE, glm::value_ptr(viewProjMatrix));
-			// up and right vector of the camera
-			glUniform3f(particleUniformLocation.cameraRightWorld,
-				viewProjMatrix[0][0],
-				viewProjMatrix[1][0],
-				viewProjMatrix[2][0]);
-			glUniform3f(particleUniformLocation.cameraUpWorld,
-				viewProjMatrix[0][1],
-				viewProjMatrix[1][1],
-				viewProjMatrix[2][1]);
-			//update particle position, color, size
-			glUniform3fv(particleUniformLocation.particleColor, 1, glm::value_ptr(particle.Color));
-			glUniform3fv(particleUniformLocation.particlePos, 1, glm::value_ptr(particle.Position));
-			glUniform1f(particleUniformLocation.particleAge, particle.Life);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-		}
-	}
+    // iterate from sorted depth map
+    for(std::map<float,int>::reverse_iterator it = sorted.rbegin(); it != sorted.rend(); ++it)
+    {
+        //update camera view projection matrix
+        glUniformMatrix4fv(particleUniformLocation.viewProjMatrix,1, GL_FALSE, glm::value_ptr(viewProjMatrix));
+        // up and right vector of the camera
+        glUniform3f(particleUniformLocation.cameraRightWorld,
+            viewProjMatrix[0][0],
+            viewProjMatrix[1][0],
+            viewProjMatrix[2][0]);
+        glUniform3f(particleUniformLocation.cameraUpWorld,
+            viewProjMatrix[0][1],
+            viewProjMatrix[1][1],
+            viewProjMatrix[2][1]);
+        //update particle position, color, size
+        glUniform3fv(particleUniformLocation.particleColor, 1, glm::value_ptr(this->particles[int(it->second)].Color));
+        glUniform3fv(particleUniformLocation.particlePos, 1, glm::value_ptr(this->particles[int(it->second)].Position));
+        glUniform2fv(particleUniformLocation.particleCenter, 1, glm::value_ptr(glm::vec2(this->particles[int(it->second)].OrgPosX, this->particles[int(it->second)].OrgPosZ)));
+        glUniform1f(particleUniformLocation.particleAge, this->particles[int(it->second)].Life);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
 	
 	// don't forget to reset to default blending mode
 	glBindVertexArray(0);
@@ -137,6 +139,7 @@ void ParticleGenerator::GetParticleUniLocations()
 	particleUniformLocation.particleTexture = glGetUniformLocation(particleShader, "particleTexture"); 
 	particleUniformLocation.particleAge = glGetUniformLocation(particleShader, "particleAge");
 	particleUniformLocation.particleSize = glGetUniformLocation(particleShader, "particleSize");
+    particleUniformLocation.particleCenter = glGetUniformLocation(particleShader, "particleCenter");
 	
 	
 }
@@ -181,6 +184,18 @@ void ParticleGenerator::respawnParticle(Particle& particle)
 	//particle.Color = glm::vec3(COLOR_RED_VAL, (VEL_X_LIM - abs(particle.OrgPosX)) / VEL_X_LIM, (VEL_Z_LIM - abs(particle.OrgPosZ)) / VEL_Z_LIM);
 	particle.Life = PARTICLE_LIFE;// GetRandom(5000.0f, 10000.0f);
 	
+}
+
+void ParticleGenerator::depthSort(std::map<float, int> &sorted, glm::vec3 camera)
+{
+    for (unsigned int i = 0; i < this->particles.size(); i++)
+    {
+        if (this->particles[i].Life > 0.0f){
+            float distance = glm::length(camera - this->particles[i].Position);
+            sorted[distance] = i;
+        }
+    }
+    //The result is a sorted container object that stores each of survive particle positions based on their distance key value from lowest to highest distance.
 }
 
 

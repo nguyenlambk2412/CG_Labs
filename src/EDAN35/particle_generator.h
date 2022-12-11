@@ -10,6 +10,7 @@
 #define PARTICLE_GENERATOR_H
 #define GLM_FORCE_PURE 1
 #include <vector>
+#include <map>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include "core/helpers.hpp"
@@ -31,6 +32,8 @@ const float COLOR_BLUE_VAL = 0.2F;
 const float POS_X_LIM = 20.0f;
 const float POS_Z_LIM = 20.0f;
 
+const glm::vec3 BASE_COLOR = glm::vec3(1.0f, 1.0f, 0.66f);
+
 // Represents a single particle and its state
 struct Particle {
 	float OrgPosX;
@@ -45,6 +48,7 @@ struct Particle {
 		OrgPosX = pos.x;
 		OrgPosZ = pos.z;
 		Velocity = vec;
+        Color = BASE_COLOR;
 		//Color = glm::vec3(COLOR_RED_VAL, (VEL_X_LIM - abs(OrgPosX)) / VEL_X_LIM, (VEL_Z_LIM - abs(OrgPosZ)) / VEL_Z_LIM);
 		Life = lif;
 	}
@@ -60,6 +64,7 @@ struct ParticleShaderLocations
 	GLuint particleColor{ 0u };
 	GLuint particleTexture{ 0u };
 	GLuint particleAge{ 0u };
+    GLuint particleCenter{ 0u };
 };
 
 
@@ -74,7 +79,7 @@ public:
     // update all particles
     void Update(float dt, unsigned int newParticles);
     // render all particles
-	void Draw(glm::mat4 viewProjMatrix, float tempSize);
+	void Draw(glm::mat4 viewProjMatrix, float tempSize, glm::vec3 camera);
 
 private:
     // state
@@ -90,9 +95,10 @@ private:
 	// get all uniforms locations
 	void GetParticleUniLocations();
 	float GetRandom(float from, float to);
-
+    
 	unsigned int firstUnusedParticle();
 	void respawnParticle(Particle& particle);
+    void depthSort(std::map<float, int> &sorted, glm::vec3 camera);
 
 };
 

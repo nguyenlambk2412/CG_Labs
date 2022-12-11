@@ -737,7 +737,7 @@ edan35::Assignment2::run()
 		
 		if (show_fire) {
 			if(!pauseFire) particles.Update(0.02f, 5);
-			particles.Draw(camera_view_proj_transforms.view_projection, particleSize);
+			particles.Draw(camera_view_proj_transforms.view_projection, particleSize, mCamera.mWorld.GetTranslation());
 		}
 
 
